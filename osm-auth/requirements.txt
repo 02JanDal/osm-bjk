@@ -1,0 +1,4 @@
+aiohttp==3.8.5
+FastAPI==0.103.1
+PyJWT==2.8.0
+uvicorn==0.23.2

@@ -1,4 +1,4 @@
-name: Docker (airflow)
+name: Docker (osm_auth)
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}-airflow
+  IMAGE_NAME: ${{ github.repository }}-osm_auth
 
 jobs:
   build:
@@ -43,7 +43,7 @@ jobs:
         id: build-and-push
         uses: docker/build-push-action@v4
         with:
-          context: airflow
+          context: osm-auth
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

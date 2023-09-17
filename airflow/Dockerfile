@@ -3,7 +3,7 @@ FROM apache/airflow:2.7.0
 USER root
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-         pyosmium \
+         pyosmium osm2pgsql \
   && apt-get autoremove -yqq --purge \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
@@ -17,7 +17,7 @@ RUN pip install --no-cache-dir \
 	apache-airflow-providers-http \
 	apache-airflow-providers-sftp \
 	airflow-code-editor black \
-	overpy \
+	overpy osmapi osmium \
 	gtfs_kit \
 	pandas geopandas shapely fiona \
-	requests
+	requests ujson

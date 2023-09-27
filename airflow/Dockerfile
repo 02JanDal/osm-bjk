@@ -16,6 +16,7 @@ RUN pip install --no-cache-dir \
 	apache-airflow-providers-ftp \
 	apache-airflow-providers-http \
 	apache-airflow-providers-sftp \
+  apache-airflow-providers-cncf-kubernetes \
 	airflow-code-editor black \
 	overpy osmapi osmium \
 	gtfs_kit \

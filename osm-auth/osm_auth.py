@@ -62,7 +62,6 @@ class TokenContent(BaseModel):
 
 @app.get("/auth/callback")
 async def callback(code: str, state: str, osm_temporary: str | None = Cookie(default=None)):
-
     osm_temporary = jwt.decode(
         osm_temporary,
         SECRET,
@@ -103,8 +102,10 @@ async def callback(code: str, state: str, osm_temporary: str | None = Cookie(def
         )
         token_encoded = jwt.encode(dict(
             **token.model_dump(mode="json"),
+            role="web_auth",
             nbf=token_response.created_at,
             iat=token_response.created_at,
+            aud="osm.jandal.se",
             iss="openstreetmap.org"
         ), SECRET, algorithm="HS256")
         response.set_cookie("osm_session", token_encoded,
@@ -142,7 +143,7 @@ def auth(
         x_original_url: str = Header()
 ):
     if osm_session:
-        token = TokenContent(**jwt.decode(osm_session, SECRET, issuer="openstreetmap.org", algorithms=["HS256"]))
+        token = TokenContent(**jwt.decode(osm_session, SECRET, audience="osm.jandal.se", issuer="openstreetmap.org", algorithms=["HS256"]))
         if token:
             response.headers["X-User-ID"] = str(token.user_id)
             response.headers["X-User-Name"] = token.user_name

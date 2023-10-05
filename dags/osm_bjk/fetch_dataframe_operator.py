@@ -95,6 +95,7 @@ class FetchDataframeOperator(BaseOperator):
         print("Preparing database...")
         with pg_cursor() as cur:
             dataset_id = get_or_create_dataset(cur, self.provider, self.dataset, self.dataset_url, self.license)
+            print("Using dataset:", dataset_id)
 
             if isinstance(df.index, RangeIndex):
                 cur.execute(

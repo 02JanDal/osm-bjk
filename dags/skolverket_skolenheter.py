@@ -8,6 +8,7 @@ from airflow.decorators import task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from requests import Session
 
+from osm_bjk import make_prefix
 from osm_bjk.fetch_dataframe_operator import get_or_create_dataset, upsert
 from osm_bjk.licenses import CC0_1_0
 
@@ -28,7 +29,7 @@ with DAG(
     )
 ):
     @task(task_id="fetch", outlets=[Dataset(f"psql://upstream/skolverket/skolenhetsregistret")])
-    def fetch():
+    def fetch(run_id: str = None):
         hook = PostgresHook(postgres_conn_id="PG_OSM")
         with hook.get_conn() as conn:
             hook.set_autocommit(conn, False)
@@ -61,7 +62,7 @@ with DAG(
                                     float(unit["Besoksadress"]["GeoData"]["Koordinat_SweRef_E"].replace(",", "."))
                                 ).wkb), 3006, unit, fetched_at)
                                 for unit in units
-                            ))
+                            ), make_prefix(run_id))
             except Exception:
                 conn.rollback()
                 raise

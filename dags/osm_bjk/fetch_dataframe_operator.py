@@ -4,16 +4,19 @@ from typing import Callable, Iterable, cast, NamedTuple
 
 import geopandas
 import numpy as np
-import psycopg2
 import ujson
 from airflow.models import BaseOperator, TaskInstance
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.utils.context import Context
 from geopandas import GeoDataFrame
 from pandas import RangeIndex, Timestamp
+from psycopg import Cursor, Copy
+
+from osm_bjk import make_prefix
+from osm_bjk.pg_cursor import pg_cursor
 
 
-def get_or_create_dataset(cur: psycopg2._psycopg.cursor, provider: str, dataset: str, dataset_url: str, license: str) -> int:
+def get_or_create_dataset(cur: Cursor, provider: str, dataset: str, dataset_url: str, license: str) -> int:
     cur.execute(
         "SELECT id FROM upstream.provider WHERE name = %s", (provider,)
     )
@@ -24,11 +27,26 @@ def get_or_create_dataset(cur: psycopg2._psycopg.cursor, provider: str, dataset:
     return cur.fetchone()[0]
 
 
-def upsert(cur: psycopg2._psycopg.cursor, items: Iterable[tuple[int, str, bytes, int, dict, datetime]]):
-    cur.executemany(
-        """
+def upsert(cur: Cursor, items: Iterable[tuple[int, str, bytes, int, dict, datetime]], prefix: str):
+    cur.execute(f"""
+CREATE TEMPORARY TABLE {prefix}_temp (
+    dataset_id INTEGER,
+    original_id TEXT,
+    geometry BYTEA,
+    srid INTEGER,
+    original_attributes TEXT,
+    fetched_at TIMESTAMPTZ
+)
+    """)
+    with cur.copy(f"COPY {prefix}_temp FROM STDIN") as copy:
+        copy: Copy
+        for i in items:
+            copy.write_row((i[0], i[1], i[2], i[3], ujson.dumps(i[4]), i[5]))
+    cur.execute(
+        f"""
 WITH v (dataset_id, original_id, geometry, original_attributes, fetched_at) AS (
-    VALUES (%s, %s, ST_Transform(ST_Force2D(ST_GeomFromWKB(%s, %s)), 3006), %s::json, %s)
+    SELECT dataset_id, original_id, ST_Transform(ST_Force2D(ST_GeomFromWKB(geometry, srid)), 3006), original_attributes::json, fetched_at
+    FROM {prefix}_temp
 ),
 updated AS (
     UPDATE upstream.item i SET original_attributes = v.original_attributes, geometry = v.geometry, fetched_at = v.fetched_at
@@ -43,9 +61,9 @@ inserted AS (
     RETURNING id
 )
 SELECT * FROM updated UNION ALL SELECT * FROM inserted
-        """,
-        ((i[0], i[1], i[2], i[3], ujson.dumps(i[4]), i[5]) for i in items)
+        """
     )
+    cur.execute(f"DROP TABLE {prefix}_temp")
 
 
 def process_row(row: NamedTuple) -> dict:
@@ -75,40 +93,32 @@ class FetchDataframeOperator(BaseOperator):
             print(f"Got {len(df)} items")
         df = df.replace(np.nan, None)
         print("Preparing database...")
-        hook = PostgresHook(postgres_conn_id="PG_OSM")
-        with hook.get_conn() as conn:
-            hook.set_autocommit(conn, False)
-            try:
-                with conn.cursor() as cur:
-                    dataset_id = get_or_create_dataset(cur, self.provider, self.dataset, self.dataset_url, self.license)
+        with pg_cursor() as cur:
+            dataset_id = get_or_create_dataset(cur, self.provider, self.dataset, self.dataset_url, self.license)
 
-                    if isinstance(df.index, RangeIndex):
-                        cur.execute(
-                            "DELETE FROM upstream.item WHERE dataset_id = %s",
-                            (dataset_id,))
-                        print("Loading data into database...")
-                        items = [(dataset_id, row.geometry.wkb, df.crs.to_epsg(), ujson.dumps(process_row(row)), fetched_at)
-                                 for row in df.itertuples(index=False) if row.geometry is not None]
-                        ignored_items = len([1 for row in df.itertuples(index=False) if row.geometry is None])
-                        cur.executemany(
-                            "INSERT INTO upstream.item (dataset_id, geometry, original_attributes, fetched_at) VALUES (%s, ST_Transform(ST_Force2D(ST_GeomFromWKB(%s, %s)), 3006), %s::json, %s) RETURNING 1",
-                            items
-                        )
-                        print(f"Inserted {len(items)} items")
-                        if ignored_items:
-                            print(f"Ignored {ignored_items} items without geometry")
-                    else:
-                        cur.execute(
-                            "DELETE FROM upstream.item WHERE dataset_id = %s AND original_id <> ANY(%s)",
-                            (dataset_id, list(df.index)))
-                        print("Loading data into database...")
-                        items = [(dataset_id, cast(str, row.Index), cast(bytes, row.geometry.wkb), cast(int, df.crs.to_epsg()),
-                                  process_row(row),
-                                  fetched_at)
-                                 for row in df.itertuples()]
-                        upsert(cur, items)
-                        print(f"Inserted or updated of {len(items)} items")
-
-                    conn.commit()
-            finally:
-                conn.rollback()
+            if isinstance(df.index, RangeIndex):
+                cur.execute(
+                    "DELETE FROM upstream.item WHERE dataset_id = %s",
+                    (dataset_id,))
+                print("Loading data into database...")
+                items = [(dataset_id, row.geometry.wkb, df.crs.to_epsg(), ujson.dumps(process_row(row)), fetched_at)
+                         for row in df.itertuples(index=False) if row.geometry is not None]
+                ignored_items = len([1 for row in df.itertuples(index=False) if row.geometry is None])
+                cur.executemany(
+                    "INSERT INTO upstream.item (dataset_id, geometry, original_attributes, fetched_at) VALUES (%s, ST_Transform(ST_Force2D(ST_GeomFromWKB(%s, %s)), 3006), %s::json, %s) RETURNING 1",
+                    items
+                )
+                print(f"Inserted {len(items)} items")
+                if ignored_items:
+                    print(f"Ignored {ignored_items} items without geometry")
+            else:
+                cur.execute(
+                    "DELETE FROM upstream.item WHERE dataset_id = %s AND original_id <> ANY(%s)",
+                    (dataset_id, list(df.index)))
+                print("Loading data into database...")
+                items = [(dataset_id, cast(str, row.Index), cast(bytes, row.geometry.wkb), cast(int, df.crs.to_epsg()),
+                          process_row(row),
+                          fetched_at)
+                         for row in df.itertuples()]
+                upsert(cur, items, make_prefix(context["run_id"]))
+                print(f"Inserted or updated of {len(items)} items")

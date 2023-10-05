@@ -185,7 +185,7 @@ CREATE TABLE IF NOT EXISTS osm.{self._prefix}_changeset (
     id BIGINT NOT NULL PRIMARY KEY,
     tags JSONB,
     created_at TIMESTAMPTZ,
-    open INT,
+    open BOOLEAN,
     uid BIGINT
 );
 TRUNCATE osm.{self._prefix}_changeset;

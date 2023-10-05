@@ -14,6 +14,7 @@ from osmium.replication.server import ReplicationServer, LOG as REPLICATION_LOG
 from osmium.replication.utils import get_replication_header
 from psycopg import Cursor, Copy
 
+from osm_bjk import make_prefix
 from osm_bjk.pg_cursor import pg_cursor
 from osm_bjk.replication.build_geometries import build_geometries
 from osm_bjk.replication.copy_handlers import CopyRelationHandler, CopyNodeHandler, CopyWayHandler, CopyChangesetHandler
@@ -29,10 +30,6 @@ class LoadReturn(TypedDict):
     url: str
     sequence: int
     timestamp: datetime
-
-
-def make_prefix(run_id: str):
-    return run_id.replace("-", "").replace(":", "").replace(".", "").replace("+", "").replace("_", "")
 
 
 with DAG(
@@ -53,7 +50,7 @@ with DAG(
 ):
     @task(task_id="load-nodes", multiple_outputs=True)
     def load_nodes(run_id: str = None) -> LoadReturn:
-        with pg_cursor() as cur:
+        with pg_cursor(f"load-nodes ({run_id})") as cur:
             with TemporaryDirectory() as directory:
                 print("Downloading...")
                 filename = os.path.join(directory, "data.osm.pbf")
@@ -67,7 +64,7 @@ with DAG(
 
     @task(task_id="load-ways", multiple_outputs=True)
     def load_ways(run_id: str = None) -> LoadReturn:
-        with pg_cursor() as cur:
+        with pg_cursor(f"load-ways ({run_id})") as cur:
             with TemporaryDirectory() as directory:
                 print("Downloading...")
                 filename = os.path.join(directory, "data.osm.pbf")
@@ -81,7 +78,7 @@ with DAG(
 
     @task(task_id="load-relations", multiple_outputs=True)
     def load_relations(run_id: str = None) -> LoadReturn:
-        with pg_cursor() as cur:
+        with pg_cursor(f"load-relations ({run_id})") as cur:
             with TemporaryDirectory() as directory:
                 print("Downloading...")
                 filename = os.path.join(directory, "data.osm.pbf")
@@ -96,7 +93,7 @@ with DAG(
 
     @task(task_id="load-changesets", multiple_outputs=True)
     def load_changesets(run_id: str = None) -> LoadReturn:
-        with pg_cursor() as cur:
+        with pg_cursor(f"load-changesets ({run_id})") as cur:
             with TemporaryDirectory() as directory:
                 print("Downloading...")
                 filename = os.path.join(directory, "data.osm.pbf")
@@ -113,7 +110,7 @@ with DAG(
         prefix = make_prefix(run_id)
         osm = OsmApi()
 
-        with pg_cursor() as cur:
+        with pg_cursor(f"load-missing-nodes ({run_id})") as cur:
             cur: Cursor
             cur.execute(f"""
             SELECT DISTINCT unioned.id FROM (
@@ -144,7 +141,7 @@ with DAG(
         sequence = min(sequence_n, sequence_w, sequence_r, sequence_c)
         prefix = make_prefix(run_id)
 
-        with pg_cursor() as cur:
+        with pg_cursor(f"process ({run_id})") as cur:
             print("Creating final schema...")
             cur.execute(OSM_SCHEMA)
             cur.execute(

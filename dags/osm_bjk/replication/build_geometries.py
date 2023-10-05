@@ -37,7 +37,7 @@ def build_geometries(cursor: Cursor):
     print("  Building areas from multipolygons...")
     # TODO: ST_BuildArea is efficient, but ignores role information, is that an issue?
     cursor.execute("""
-    INSERT INTO osm.area (id, relation_id, geom, timestamp) (SELECT relation.id, relation.id,
+    INSERT INTO osm.area (id, relation_id, geom, timestamp) (SELECT relation.id + 3600000000, relation.id,
                                                                     ST_BuildArea(ST_Collect(way_geom.geom)),
                                                                     MAX(way_geom.timestamp)
                                                              FROM osm.relation

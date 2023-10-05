@@ -9,6 +9,7 @@ from urllib.request import urlretrieve
 import ujson
 from airflow import DAG, Dataset
 from airflow.decorators import task
+from airflow.models import TaskInstance
 from osmapi import OsmApi
 from osmium.replication.server import ReplicationServer, LOG as REPLICATION_LOG
 from osmium.replication.utils import get_replication_header
@@ -49,68 +50,68 @@ with DAG(
         )
 ):
     @task(task_id="load-nodes", multiple_outputs=True)
-    def load_nodes(run_id: str = None) -> LoadReturn:
-        with pg_cursor(f"load-nodes ({run_id})") as cur:
+    def load_nodes(ti: TaskInstance = None) -> LoadReturn:
+        with pg_cursor(ti) as cur:
             with TemporaryDirectory() as directory:
                 print("Downloading...")
                 filename = os.path.join(directory, "data.osm.pbf")
                 urlretrieve(latest_url, filename)
                 url, sequence, timestamp = get_replication_header(filename)
                 print("Pre-loading...")
-                handler = CopyNodeHandler(cur, make_prefix(run_id))
+                handler = CopyNodeHandler(cur, make_prefix(ti))
                 handler.apply_file(filename, locations=False)
                 handler.write_buffer()
         return dict(url=url, sequence=sequence, timestamp=timestamp)
 
     @task(task_id="load-ways", multiple_outputs=True)
-    def load_ways(run_id: str = None) -> LoadReturn:
-        with pg_cursor(f"load-ways ({run_id})") as cur:
+    def load_ways(ti: TaskInstance = None) -> LoadReturn:
+        with pg_cursor(ti) as cur:
             with TemporaryDirectory() as directory:
                 print("Downloading...")
                 filename = os.path.join(directory, "data.osm.pbf")
                 urlretrieve(latest_url, filename)
                 print("Pre-loading...")
                 url, sequence, timestamp = get_replication_header(filename)
-                handler = CopyWayHandler(cur, make_prefix(run_id))
+                handler = CopyWayHandler(cur, make_prefix(ti.run_id))
                 handler.apply_file(filename, locations=False)
                 handler.write_buffer()
         return dict(url=url, sequence=sequence, timestamp=timestamp)
 
     @task(task_id="load-relations", multiple_outputs=True)
-    def load_relations(run_id: str = None) -> LoadReturn:
-        with pg_cursor(f"load-relations ({run_id})") as cur:
+    def load_relations(ti: TaskInstance = None) -> LoadReturn:
+        with pg_cursor(ti) as cur:
             with TemporaryDirectory() as directory:
                 print("Downloading...")
                 filename = os.path.join(directory, "data.osm.pbf")
                 urlretrieve(latest_url, filename)
                 print("Pre-loading...")
                 url, sequence, timestamp = get_replication_header(filename)
-                handler = CopyRelationHandler(cur, make_prefix(run_id))
+                handler = CopyRelationHandler(cur, make_prefix(ti.run_id))
                 handler.apply_file(filename, locations=False)
                 handler.write_buffer()
         return dict(url=url, sequence=sequence, timestamp=timestamp)
 
 
     @task(task_id="load-changesets", multiple_outputs=True)
-    def load_changesets(run_id: str = None) -> LoadReturn:
-        with pg_cursor(f"load-changesets ({run_id})") as cur:
+    def load_changesets(ti: TaskInstance = None) -> LoadReturn:
+        with pg_cursor(ti) as cur:
             with TemporaryDirectory() as directory:
                 print("Downloading...")
                 filename = os.path.join(directory, "data.osm.pbf")
                 urlretrieve(latest_url, filename)
                 print("Pre-loading...")
                 url, sequence, timestamp = get_replication_header(filename)
-                handler = CopyChangesetHandler(cur, make_prefix(run_id))
+                handler = CopyChangesetHandler(cur, make_prefix(ti.run_id))
                 handler.apply_file(filename, locations=False)
                 handler.write_buffer()
         return dict(url=url, sequence=sequence, timestamp=timestamp)
 
     @task(task_id="load-missing-nodes")
-    def load_missing_nodes(run_id: str = None):
-        prefix = make_prefix(run_id)
+    def load_missing_nodes(ti: TaskInstance = None):
+        prefix = make_prefix(ti.run_id)
         osm = OsmApi()
 
-        with pg_cursor(f"load-missing-nodes ({run_id})") as cur:
+        with pg_cursor(ti) as cur:
             cur: Cursor
             cur.execute(f"""
             SELECT DISTINCT unioned.id FROM (
@@ -137,11 +138,11 @@ with DAG(
                             copy.write_row((n['id'], ujson.dumps(n['tag']), f"SRID=4326;POINT({n['lon']} {n['lat']})", (n['timestamp'] if isinstance(n['timestamp'], datetime) else datetime.fromisoformat(n['timestamp'])).isoformat(), n["uid"], n["version"]))
 
     @task(task_id="process", outlets=[Dataset("psql://osm")])
-    def process(sequence_n: int, sequence_w: int, sequence_r: int, sequence_c: int, url: str, run_id: str = None):
+    def process(sequence_n: int, sequence_w: int, sequence_r: int, sequence_c: int, url: str, ti: TaskInstance = None):
         sequence = min(sequence_n, sequence_w, sequence_r, sequence_c)
-        prefix = make_prefix(run_id)
+        prefix = make_prefix(ti.run_id)
 
-        with pg_cursor(f"process ({run_id})") as cur:
+        with pg_cursor(ti) as cur:
             print("Creating final schema...")
             cur.execute(OSM_SCHEMA)
             cur.execute(
@@ -153,9 +154,9 @@ with DAG(
             cur.execute(f"INSERT INTO osm.way (id, tags, meta) (SELECT id, tags, ROW(timestamp, uid, version)::osm.osm_meta FROM osm.{prefix}_way)")
             cur.execute(f"INSERT INTO osm.way_node (node_id, way_id, sequence_order) (SELECT node_id, way_id, sequence FROM osm.{prefix}_way_node)")
             cur.execute(f"INSERT INTO osm.relation (id, tags, meta) (SELECT id, tags, ROW(timestamp, uid, version)::osm.osm_meta FROM osm.{prefix}_relation)")
-            cur.execute(f"INSERT INTO osm.relation_member_node (relation_id, member_id, role, sequence_order) (SELECT relation_id, member_id, role, sequence FROM osm.{prefix}_relation_node)")
-            cur.execute(f"INSERT INTO osm.relation_member_way (relation_id, member_id, role, sequence_order) (SELECT relation_id, member_id, role, sequence FROM osm.{prefix}_relation_way)")
-            cur.execute(f"INSERT INTO osm.relation_member_relation (relation_id, member_id, role, sequence_order) (SELECT relation_id, member_id, role, sequence FROM osm.{prefix}_relation_relation)")
+            cur.execute(f"INSERT INTO osm.relation_member_node (relation_id, member_id, role, sequence_order) (SELECT relation_id, member_id, role, sequence FROM osm.{prefix}_relation_node INNER JOIN osm.{prefix}_node ON id = member_id)")
+            cur.execute(f"INSERT INTO osm.relation_member_way (relation_id, member_id, role, sequence_order) (SELECT relation_id, member_id, role, sequence FROM osm.{prefix}_relation_way INNER JOIN osm.{prefix}_way ON id = member_id)")
+            cur.execute(f"INSERT INTO osm.relation_member_relation (relation_id, member_id, role, sequence_order) (SELECT relation_id, member_id, role, sequence FROM osm.{prefix}_relation_relation INNER JOIN osm.{prefix}_relation ON id = member_id)")
             cur.execute(f"INSERT INTO osm.changeset (id, tags, created_at, open, uid) (SELECT id, tags, created_at, open, uid FROM osm.{prefix}_changeset)")
             print("Building geometries...")
             build_geometries(cur)
@@ -193,8 +194,8 @@ with DAG(
         )
 ):
     @task(task_id="sync", outlets=[Dataset("psql://osm")])
-    def sync_task():
-        with pg_cursor() as cur:
+    def sync_task(ti: TaskInstance = None):
+        with pg_cursor(ti) as cur:
             cur.execute("SELECT key, value FROM osm.meta")
             meta = cur.fetchall()
             url = next(m[1] for m in meta if m[0] == "url")

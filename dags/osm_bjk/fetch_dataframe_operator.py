@@ -93,7 +93,7 @@ class FetchDataframeOperator(BaseOperator):
             print(f"Got {len(df)} items")
         df = df.replace(np.nan, None)
         print("Preparing database...")
-        with pg_cursor() as cur:
+        with pg_cursor(context["ti"]) as cur:
             dataset_id = get_or_create_dataset(cur, self.provider, self.dataset, self.dataset_url, self.license)
             print("Using dataset:", dataset_id)
 

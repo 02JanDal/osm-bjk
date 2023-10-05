@@ -1,15 +1,16 @@
+from collections import namedtuple
 from datetime import datetime
-from typing import Callable, Iterable, cast
+from typing import Callable, Iterable, cast, NamedTuple
 
 import geopandas
 import numpy as np
 import psycopg2
 import ujson
-from airflow.models import BaseOperator
+from airflow.models import BaseOperator, TaskInstance
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.utils.context import Context
 from geopandas import GeoDataFrame
-from pandas import RangeIndex
+from pandas import RangeIndex, Timestamp
 
 
 def get_or_create_dataset(cur: psycopg2._psycopg.cursor, provider: str, dataset: str, dataset_url: str, license: str) -> int:
@@ -47,8 +48,14 @@ SELECT * FROM updated UNION ALL SELECT * FROM inserted
     )
 
 
+def process_row(row: NamedTuple) -> dict:
+    return {k: v.isoformat() if isinstance(v, Timestamp) else v
+            for k, v in row._asdict().items()
+            if k not in ('geometry', 'Index')}
+
+
 class FetchDataframeOperator(BaseOperator):
-    def __init__(self, *, fetch: Callable[[], GeoDataFrame] | str, provider: str, dataset: str, dataset_url: str,
+    def __init__(self, *, fetch: Callable[[TaskInstance], GeoDataFrame] | str, provider: str, dataset: str, dataset_url: str,
                  license: str, **kwargs):
         super().__init__(**kwargs)
         self.fetch = fetch
@@ -64,7 +71,7 @@ class FetchDataframeOperator(BaseOperator):
             df = geopandas.read_file(self.fetch)
             print(f"Got {len(df)} items from {self.fetch}")
         else:
-            df = self.fetch()
+            df = self.fetch(context["task_instance"])
             print(f"Got {len(df)} items")
         df = df.replace(np.nan, None)
         print("Preparing database...")
@@ -80,11 +87,9 @@ class FetchDataframeOperator(BaseOperator):
                             "DELETE FROM upstream.item WHERE dataset_id = %s",
                             (dataset_id,))
                         print("Loading data into database...")
-                        items = [(dataset_id, row[1].geometry.wkb, df.crs.to_epsg(),
-                                  ujson.dumps({k: v for k, v in row[1].items() if k != 'geometry'}),
-                                  fetched_at)
-                                 for row in df.iterrows() if row[1].geometry is not None]
-                        ignored_items = len([1 for row in df.iterrows() if row[1].geometry is None])
+                        items = [(dataset_id, row.geometry.wkb, df.crs.to_epsg(), ujson.dumps(process_row(row)), fetched_at)
+                                 for row in df.itertuples(index=False) if row.geometry is not None]
+                        ignored_items = len([1 for row in df.itertuples(index=False) if row.geometry is None])
                         cur.executemany(
                             "INSERT INTO upstream.item (dataset_id, geometry, original_attributes, fetched_at) VALUES (%s, ST_Transform(ST_Force2D(ST_GeomFromWKB(%s, %s)), 3006), %s::json, %s) RETURNING 1",
                             items
@@ -97,10 +102,10 @@ class FetchDataframeOperator(BaseOperator):
                             "DELETE FROM upstream.item WHERE dataset_id = %s AND original_id <> ANY(%s)",
                             (dataset_id, list(df.index)))
                         print("Loading data into database...")
-                        items = [(dataset_id, cast(str, row[0]), cast(bytes, row[1].geometry.wkb), cast(int, df.crs.to_epsg()),
-                                  {k: v for k, v in row[1].items() if k != 'geometry'},
+                        items = [(dataset_id, cast(str, row.Index), cast(bytes, row.geometry.wkb), cast(int, df.crs.to_epsg()),
+                                  process_row(row),
                                   fetched_at)
-                                 for row in df.iterrows()]
+                                 for row in df.itertuples()]
                         upsert(cur, items)
                         print(f"Inserted or updated of {len(items)} items")
 

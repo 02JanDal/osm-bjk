@@ -25,7 +25,7 @@ with DAG(
             retry_delay=timedelta(minutes=5)
         )
 ):
-    def fetch_forskolor():
+    def fetch_forskolor(*_args, **_kwargs):
         with TemporaryDirectory() as directory:
             zipname = os.path.join(directory, "data.zip")
             url = "https://www.scb.se/contentassets/51c8cfbe88a94a36927ad34618e636b9/forskolor_vt23_sweref_rev230525.zip"

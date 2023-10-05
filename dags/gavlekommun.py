@@ -73,7 +73,7 @@ with DAG(
         description=f"Hämtar Kommunala och privata skolor från Gävle kommun",
         **args
 ):
-    def fetch_skolor():
+    def fetch_skolor(*_args, **_kwargs):
         df = pd.read_csv("https://catalog.gavle.se/store/1/resource/38")
         geom = gpd.points_from_xy(df.long, df.lat, crs="EPSG:4326")
         return gpd.GeoDataFrame(df, geometry=geom).set_index("id")
@@ -94,7 +94,7 @@ class FetchExtract:
         self.resource = resource
         self.member = member
 
-    def __call__(self):
+    def __call__(self, *_args, **_kwargs):
         with TemporaryDirectory() as directory:
             zipname = os.path.join(directory, "data.zip")
             url = f"https://catalog.gavle.se/store/1/resource/{self.resource}"
@@ -187,7 +187,7 @@ with DAG(
         description=f"Hämtar Baskarta Detaljer från Gävle kommun",
         **args
 ):
-    def fetch_detaljer():
+    def fetch_detaljer(*_args, **_kwargs):
         with TemporaryDirectory() as directory:
             zipname = os.path.join(directory, "data.zip")
             url = "https://catalog.gavle.se/store/1/resource/96"
@@ -247,7 +247,7 @@ with DAG(
             outlets=[Dataset(f"psql://upstream/gavlekommun/vatten-{file.lower()}")]
         )
 
-    def fetch_vattenobjekt():
+    def fetch_vattenobjekt(*_args, **_kwargs):
         with TemporaryDirectory() as directory:
             zipname = os.path.join(directory, "data.zip")
             url = "https://catalog.gavle.se/store/1/resource/92"

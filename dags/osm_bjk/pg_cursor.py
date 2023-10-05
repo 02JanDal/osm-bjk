@@ -9,7 +9,7 @@ from psycopg import Cursor
 
 @contextmanager
 def pg_cursor() -> Generator[Cursor, None, None]:
-    conn_data: Connection = BaseHook.get_connnection(postgres_conn_id="PG_OSM")
+    conn_data: Connection = BaseHook.get_connection("PG_OSM")
     with psycopg.connect(
             host=conn_data.host,
             user=conn_data.login,

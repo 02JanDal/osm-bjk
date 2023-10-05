@@ -21,4 +21,5 @@ RUN pip install --no-cache-dir \
 	overpy osmapi osmium \
 	gtfs_kit \
 	pandas geopandas shapely fiona \
+  psycopg \
 	requests ujson

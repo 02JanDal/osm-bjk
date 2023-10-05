@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS osm.{self._prefix}_changeset (
     open INT,
     uid BIGINT
 );
-TRUNCATE osm.{self._prefix}_node;
+TRUNCATE osm.{self._prefix}_changeset;
         """)
         self._buffer: list[tuple[int, dict, datetime, bool, int]] = []
         self._count = 0

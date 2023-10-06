@@ -162,8 +162,12 @@ with DAG(
             build_geometries(cur)
 
     @task(task_id="cleanup")
-    def cleanup(run_id: str = None):
-        pass
+    def cleanup(ti: TaskInstance = None):
+        prefix = make_prefix(ti.run_id)
+
+        with pg_cursor(ti) as cur:
+            for table in ("relation_node", "relation_way", "relation_relation", "relation", "way_node", "way", "node", "changeset"):
+                cur.execute(f"DROP TABLE osm.{prefix}_{table} CASCADE")
 
     load_nodes_t = load_nodes()
     load_ways_t = load_ways()

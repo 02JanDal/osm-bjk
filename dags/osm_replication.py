@@ -215,15 +215,17 @@ with DAG(
                         return None
 
                     res.reader.apply(handler)
+                    print("Finalizing batch...")
+                    handler.finalize()
 
                     cur.execute("UPDATE osm.meta SET value = %s WHERE key = 'sequence'", (res.id,))
-                    print("Replicated, now at sequence ", res.id)
+                    sequence = res.id
+                    print("Replicated, now at sequence ", res.id, ", newest is", res.newest)
+                    print("Committing...")
+                    cur.connection.commit()
 
                     if res.newest <= res.id:
-                        print("No more sequences to fetch")
-                        handler.finalize()
-                        cur.connection.commit()
-                        print("Replication finished")
+                        print("No more sequences to fetch, replication finished")
                         return res.id
 
     sync_t = sync_task()

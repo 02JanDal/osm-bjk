@@ -31,19 +31,21 @@ CREATE TABLE IF NOT EXISTS osm.way (
     tags JSONB NOT NULL,
     meta osm.osm_meta NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_way_tags ON osm.way USING GIN (tags);
 CREATE TABLE IF NOT EXISTS osm.way_geom (
     id BIGINT PRIMARY KEY NOT NULL REFERENCES osm.way(id) ON DELETE CASCADE,
     geom GEOMETRY(LineString, 3006) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_way_geom ON osm.way_geom USING GIST (geom);
 CREATE TABLE IF NOT EXISTS osm.way_node (
     node_id BIGINT NOT NULL REFERENCES osm.node(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
     way_id BIGINT NOT NULL REFERENCES osm.way(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
     sequence_order INT NOT NULL,
     UNIQUE (way_id, sequence_order) DEFERRABLE INITIALLY DEFERRED
 );
-CREATE INDEX IF NOT EXISTS idx_way_geom ON osm.way_geom USING GIST (geom);
-CREATE INDEX IF NOT EXISTS idx_way_tags ON osm.way USING GIN (tags);
+CREATE INDEX IF NOT EXISTS idx_way_node_node ON osm.way_node (node_id);
+CREATE INDEX IF NOT EXISTS idx_way_node_way ON osm.way_node (way_id);
 
 CREATE TABLE IF NOT EXISTS osm.relation (
     id BIGINT PRIMARY KEY NOT NULL,
@@ -58,6 +60,8 @@ CREATE TABLE IF NOT EXISTS osm.relation_member_node (
     sequence_order INT NOT NULL,
     UNIQUE (relation_id, sequence_order) DEFERRABLE INITIALLY DEFERRED
 );
+CREATE INDEX IF NOT EXISTS idx_relation_member_node_relation ON osm.relation_member_node (relation_id);
+CREATE INDEX IF NOT EXISTS idx_relation_member_node_member ON osm.relation_member_node (member_id);
 CREATE TABLE IF NOT EXISTS osm.relation_member_way (
     relation_id BIGINT NOT NULL REFERENCES osm.relation(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
     member_id BIGINT NOT NULL REFERENCES osm.way(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
@@ -65,6 +69,8 @@ CREATE TABLE IF NOT EXISTS osm.relation_member_way (
     sequence_order INT NOT NULL,
     UNIQUE (relation_id, sequence_order) DEFERRABLE INITIALLY DEFERRED
 );
+CREATE INDEX IF NOT EXISTS idx_relation_member_way_relation ON osm.relation_member_way (relation_id);
+CREATE INDEX IF NOT EXISTS idx_relation_member_way_member ON osm.relation_member_way (member_id);
 CREATE TABLE IF NOT EXISTS osm.relation_member_relation (
     relation_id BIGINT NOT NULL REFERENCES osm.relation(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
     member_id BIGINT NOT NULL REFERENCES osm.relation(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
@@ -72,6 +78,8 @@ CREATE TABLE IF NOT EXISTS osm.relation_member_relation (
     sequence_order INT NOT NULL,
     UNIQUE (relation_id, sequence_order) DEFERRABLE INITIALLY DEFERRED
 );
+CREATE INDEX IF NOT EXISTS idx_relation_member_relation_relation ON osm.relation_member_relation (relation_id);
+CREATE INDEX IF NOT EXISTS idx_relation_member_relation_member ON osm.relation_member_relation (member_id);
 
 CREATE TABLE IF NOT EXISTS osm.area (
     id BIGINT PRIMARY KEY NOT NULL,
@@ -85,6 +93,8 @@ CREATE TABLE IF NOT EXISTS osm.area (
     UNIQUE (relation_id)
 );
 CREATE INDEX IF NOT EXISTS idx_area_geom ON osm.area USING GIST (geom);
+CREATE INDEX IF NOT EXISTS idx_area_relation ON osm.area (relation_id) WHERE relation_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_area_way ON osm.area (way_id) WHERE way_id IS NOT NULL;
 
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'object_type') THEN

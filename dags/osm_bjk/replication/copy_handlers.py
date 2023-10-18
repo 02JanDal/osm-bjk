@@ -15,7 +15,7 @@ class CopyNodeHandler(SimpleHandler):
         self._geom_factory = WKTFactory()
         self._prefix = prefix
         self._cursor.execute(f"""
-CREATE TABLE IF NOT EXISTS osm.{self._prefix}_node (
+CREATE UNLOGGED TABLE IF NOT EXISTS osm.{self._prefix}_node (
     id BIGINT NOT NULL PRIMARY KEY,
     tags JSONB,
     geom GEOMETRY(Point, 4326),
@@ -51,14 +51,14 @@ class CopyWayHandler(SimpleHandler):
         self._cursor = cursor
         self._prefix = prefix
         self._cursor.execute(f"""
-CREATE TABLE IF NOT EXISTS osm.{self._prefix}_way (
+CREATE UNLOGGED TABLE IF NOT EXISTS osm.{self._prefix}_way (
     id BIGINT NOT NULL PRIMARY KEY,
     tags JSONB NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     uid BIGINT NOT NULL,
     version INT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS osm.{self._prefix}_way_node (
+CREATE UNLOGGED TABLE IF NOT EXISTS osm.{self._prefix}_way_node (
     node_id BIGINT NOT NULL,
     way_id BIGINT NOT NULL,
     sequence INT NOT NULL
@@ -100,26 +100,26 @@ class CopyRelationHandler(SimpleHandler):
         self._cursor = cursor
         self._prefix = prefix
         self._cursor.execute(f"""
-CREATE TABLE IF NOT EXISTS osm.{self._prefix}_relation (
+CREATE UNLOGGED TABLE IF NOT EXISTS osm.{self._prefix}_relation (
     id BIGINT NOT NULL PRIMARY KEY,
     tags JSONB NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     uid BIGINT NOT NULL,
     version INT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS osm.{self._prefix}_relation_node (
+CREATE UNLOGGED TABLE IF NOT EXISTS osm.{self._prefix}_relation_node (
     member_id BIGINT NOT NULL,
     relation_id BIGINT NOT NULL,
     sequence INT NOT NULL,
     role TEXT
 );
-CREATE TABLE IF NOT EXISTS osm.{self._prefix}_relation_way (
+CREATE UNLOGGED TABLE IF NOT EXISTS osm.{self._prefix}_relation_way (
     member_id BIGINT NOT NULL,
     relation_id BIGINT NOT NULL,
     sequence INT NOT NULL,
     role TEXT
 );
-CREATE TABLE IF NOT EXISTS osm.{self._prefix}_relation_relation (
+CREATE UNLOGGED TABLE IF NOT EXISTS osm.{self._prefix}_relation_relation (
     member_id BIGINT NOT NULL,
     relation_id BIGINT NOT NULL,
     sequence INT NOT NULL,
@@ -181,7 +181,7 @@ class CopyChangesetHandler(SimpleHandler):
         self._geom_factory = WKTFactory()
         self._prefix = prefix
         self._cursor.execute(f"""
-CREATE TABLE IF NOT EXISTS osm.{self._prefix}_changeset (
+CREATE UNLOGGED TABLE IF NOT EXISTS osm.{self._prefix}_changeset (
     id BIGINT NOT NULL PRIMARY KEY,
     tags JSONB,
     created_at TIMESTAMPTZ,

@@ -184,7 +184,7 @@ with DAG(
 with DAG(
         "osm-replication",
         description="Fetches latest changes from upstream OSM servers",
-        schedule_interval=None,
+        schedule_interval=timedelta(minutes=10),
         start_date=datetime(2023, 9, 16, 21, 30),
         catchup=False,
         max_active_runs=1,

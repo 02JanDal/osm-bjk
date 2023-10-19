@@ -40,14 +40,15 @@ with DAG(
     start_date=datetime(2023, 9, 16, 21, 30),
     catchup=False,
     max_active_runs=1,
-        default_args=dict(
-            depends_on_past=False,
-            email=["jan@dalheimer.de"],
-            email_on_failure=True,
-            email_on_retry=False,
-            retries=1,
-            retry_delay=timedelta(minutes=5)
-        )
+    default_args=dict(
+        depends_on_past=False,
+        email=["jan@dalheimer.de"],
+        email_on_failure=True,
+        email_on_retry=False,
+        retries=1,
+        retry_delay=timedelta(minutes=5)
+    ),
+    tags=["osm"]
 ):
     @task(task_id="load-nodes", multiple_outputs=True)
     def load_nodes(ti: TaskInstance = None) -> LoadReturn:
@@ -195,7 +196,8 @@ with DAG(
             email_on_retry=False,
             retries=1,
             retry_delay=timedelta(minutes=5)
-        )
+        ),
+        tags=["osm"]
 ):
     @task(task_id="sync", outlets=[Dataset("psql://osm")])
     def sync_task(ti: TaskInstance = None):

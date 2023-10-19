@@ -72,7 +72,8 @@ with DAG(
             email_on_retry=False,
             retries=1,
             retry_delay=timedelta(minutes=5)
-        )
+        ),
+        tags=["provider:Lantmäteriet"]
 ):
     @task()
     def start():
@@ -122,6 +123,7 @@ with DAG(
             email_on_retry=False,
             retries=1,
             retry_delay=timedelta(minutes=5)
-        )
+        ),
+        tags=["provider:Lantmäteriet"]
 ):
     pass

@@ -23,7 +23,8 @@ with DAG(
             email_on_retry=False,
             retries=1,
             retry_delay=timedelta(minutes=5)
-        )
+        ),
+        tags=["provider:SCB"]
 ):
     def fetch_forskolor(*_args, **_kwargs):
         with TemporaryDirectory() as directory:
@@ -59,7 +60,8 @@ with DAG(
             email_on_retry=False,
             retries=1,
             retry_delay=timedelta(minutes=5)
-        )
+        ),
+        tags=["provider:SCB"]
 ):
     def fetch_kontor():
         with TemporaryDirectory() as directory:

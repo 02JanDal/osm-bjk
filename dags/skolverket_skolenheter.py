@@ -26,7 +26,8 @@ with DAG(
         email_on_retry=False,
         retries=1,
         retry_delay=timedelta(minutes=5)
-    )
+    ),
+    tags=["provider:Skolverket"]
 ):
     @task(task_id="fetch", outlets=[Dataset(f"psql://upstream/skolverket/skolenhetsregistret")])
     def fetch(run_id: str = None):

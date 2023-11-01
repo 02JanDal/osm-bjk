@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta, datetime
 from tempfile import TemporaryDirectory
+from typing import Any, Optional
 from urllib.request import urlretrieve
 
 import geopandas as gpd
@@ -25,6 +26,14 @@ args = dict(
     ),
     tags=["provider:Gävle kommun"]
 )
+
+
+def parse_gavle_datetime(v: Any) -> Optional[datetime]:
+    if str(v) == "nan" or v is None:
+        return None
+    v = str(v).split(".")[0]
+    return datetime.strptime(v, "%Y%m%d" if len(v) == 8 else "%Y%m%d%H%M%S")
+
 
 datasets = [
     ("Badplatser och badanläggningar", "badplatser", "237", "234"),
@@ -102,7 +111,10 @@ class FetchExtract:
             print(f"Downloading {url}...")
             urlretrieve(url, zipname)
             print(f"Reading {self.member}...")
-            return gpd.read_file(f"zip://{zipname}!{self.member}")
+            df = gpd.read_file(f"zip://{zipname}!{self.member}")
+            if "UPDDATUM" in df:
+                df['bjk__updatedAt'] = df.UPDDATUM.apply(parse_gavle_datetime)
+            return df
 
 
 with DAG(
@@ -198,7 +210,9 @@ with DAG(
             df_linje = gpd.read_file(f"zip://{zipname}!baskarta_linjeobjekt.json")
             print(f"Reading punktobjekt...")
             df_punkt = gpd.read_file(f"zip://{zipname}!baskarta_punktobjekt.json")
-            return gpd.GeoDataFrame(pd.concat([df_linje, df_punkt], ignore_index=True), crs=df_linje.crs)
+            df = gpd.GeoDataFrame(pd.concat([df_linje, df_punkt], ignore_index=True), crs=df_linje.crs)
+            df['bjk__updatedAt'] = df.UPDDATUM.apply(parse_gavle_datetime)
+            return df
 
     FetchDataframeOperator(
         task_id=f"fetch",
@@ -260,7 +274,9 @@ with DAG(
             df_punkt = gpd.read_file(f"zip://{zipname}!baskarta_vattenobjekt_punkt.json")
             print(f"Reading ytaobjekt...")
             df_yta = gpd.read_file(f"zip://{zipname}!baskarta_vattenobjekt_yta.json")
-            return gpd.GeoDataFrame(pd.concat([df_linje, df_punkt, df_yta], ignore_index=True), crs=df_linje.crs)
+            df = gpd.GeoDataFrame(pd.concat([df_linje, df_punkt, df_yta], ignore_index=True), crs=df_linje.crs)
+            df['bjk__updatedAt'] = df.UPDDATUM.apply(parse_gavle_datetime)
+            return df
 
     FetchDataframeOperator(
         task_id=f"fetch-vattenobjekt",

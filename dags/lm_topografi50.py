@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 import geopandas
+import pandas as pd
 from airflow import DAG, Dataset
 from airflow.decorators import task
 from airflow.models import Variable, TaskInstance
@@ -55,6 +56,7 @@ class FetchBase:
         files: list[FileData] = ti.xcom_pull(task_ids="check_ready")
         file = next(f for f in files if f["title"] == f"{self.layer}_sverige.zip")
         df = geopandas.read_file(file["href"], layer=self.sublayer).set_index("objektidentitet")
+        df['bjk__updatedAt'] = pd.to_datetime(df['skapad'])
         return df
 
 

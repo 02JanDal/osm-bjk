@@ -35,7 +35,7 @@ CREATE TEMPORARY TABLE {prefix}_temp (
     geometry BYTEA,
     srid INTEGER,
     original_attributes TEXT,
-    fetched_at TIMESTAMPTZ
+    updated_at TIMESTAMPTZ
 )
     """)
     with cur.copy(f"COPY {prefix}_temp FROM STDIN") as copy:
@@ -44,17 +44,17 @@ CREATE TEMPORARY TABLE {prefix}_temp (
             copy.write_row((i[0], i[1], i[2], i[3], ujson.dumps(i[4]), i[5]))
     cur.execute(
         f"""
-WITH v (dataset_id, original_id, geometry, original_attributes, fetched_at) AS (
-    SELECT dataset_id, original_id, ST_Transform(ST_Force2D(ST_GeomFromWKB(geometry, srid)), 3006), original_attributes::json, fetched_at
+WITH v (dataset_id, original_id, geometry, original_attributes, updated_at) AS (
+    SELECT dataset_id, original_id, ST_Transform(ST_Force2D(ST_GeomFromWKB(geometry, srid)), 3006), original_attributes::json, updated_at
     FROM {prefix}_temp
 ),
 updated AS (
-    UPDATE upstream.item i SET original_attributes = v.original_attributes, geometry = v.geometry, fetched_at = v.fetched_at
+    UPDATE upstream.item i SET original_attributes = v.original_attributes, geometry = v.geometry, updated_at = v.updated_at
     FROM v WHERE i.dataset_id = v.dataset_id AND i.original_id = v.original_id
     RETURNING id
 ),
 inserted AS (
-    INSERT INTO upstream.item (dataset_id, original_id, geometry, original_attributes, fetched_at)
+    INSERT INTO upstream.item (dataset_id, original_id, geometry, original_attributes, updated_at)
     (SELECT v.* FROM v
     LEFT OUTER JOIN upstream.item i2 ON v.dataset_id = i2.dataset_id AND v.original_id = i2.original_id
     WHERE i2.id IS NULL)
@@ -69,7 +69,7 @@ SELECT * FROM updated UNION ALL SELECT * FROM inserted
 def process_row(row: NamedTuple) -> dict:
     return {k: v.isoformat() if isinstance(v, Timestamp) else v
             for k, v in row._asdict().items()
-            if k not in ('geometry', 'Index')}
+            if k not in ('geometry', 'Index', 'bjk__updatedAt')}
 
 
 class FetchDataframeOperator(BaseOperator):
@@ -102,11 +102,11 @@ class FetchDataframeOperator(BaseOperator):
                     "DELETE FROM upstream.item WHERE dataset_id = %s",
                     (dataset_id,))
                 print("Loading data into database...")
-                items = [(dataset_id, row.geometry.wkb, df.crs.to_epsg(), ujson.dumps(process_row(row)), fetched_at)
+                items = [(dataset_id, row.geometry.wkb, df.crs.to_epsg(), ujson.dumps(process_row(row)), row.bjk__updatedAt if "bjk_updatedAt" in row else None)
                          for row in df.itertuples(index=False) if row.geometry is not None]
                 ignored_items = len([1 for row in df.itertuples(index=False) if row.geometry is None])
                 cur.executemany(
-                    "INSERT INTO upstream.item (dataset_id, geometry, original_attributes, fetched_at) VALUES (%s, ST_Transform(ST_Force2D(ST_GeomFromWKB(%s, %s)), 3006), %s::json, %s) RETURNING 1",
+                    "INSERT INTO upstream.item (dataset_id, geometry, original_attributes, updated_at) VALUES (%s, ST_Transform(ST_Force2D(ST_GeomFromWKB(%s, %s)), 3006), %s::json, %s) RETURNING 1",
                     items
                 )
                 print(f"Inserted {len(items)} items")
@@ -119,7 +119,9 @@ class FetchDataframeOperator(BaseOperator):
                 print("Loading data into database...")
                 items = [(dataset_id, cast(str, row.Index), cast(bytes, row.geometry.wkb), cast(int, df.crs.to_epsg()),
                           process_row(row),
-                          fetched_at)
+                          row.bjk__updatedAt if "bjk_updatedAt" in row else None)
                          for row in df.itertuples()]
                 upsert(cur, items, make_prefix(context["run_id"]))
                 print(f"Inserted or updated of {len(items)} items")
+
+            cur.execute("UPDATE upstream.dataset SET fetched_at = %s WHERE id = %s", (fetched_at, dataset_id))

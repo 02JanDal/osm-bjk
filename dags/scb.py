@@ -63,7 +63,7 @@ with DAG(
         ),
         tags=["provider:SCB"]
 ):
-    def fetch_kontor():
+    def fetch_kontor(*_args):
         with TemporaryDirectory() as directory:
             zipname = os.path.join(directory, "data.zip")
             url = "https://www.scb.se/contentassets/ee8137db0282427f92213f12236f0dc2/myndighetsochkommunkontor_vt23_sweref.zip"

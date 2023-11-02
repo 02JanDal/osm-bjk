@@ -53,14 +53,14 @@ with DAG(
                           ) for unit in units if unit["Besoksadress"]["GeoData"]["Koordinat_SweRef_E"])
                     )
                 else:
-                    changed = http.get(f"https://api.skolverket.se/skolenhetsregistret/v1/diff/skolenhet/{row[0].strftime('%Y%m%d')}")
-                    units = [http.get(f"https://api.skolverket.se/skolenhetsregistret/v1/skolenhet/{unit}").json()["SkolenhetsInfo"] for unit in changed["Skolenheter"]]
+                    changed = http.get(f"https://api.skolverket.se/skolenhetsregistret/v1/diff/skolenhet/{row[0].strftime('%Y%m%d')}").json()
+                    units = [http.get(f"https://api.skolverket.se/skolenhetsregistret/v1/skolenhet/{unit}").json()["SkolenhetInfo"] for unit in changed["Skolenhetskoder"]]
                     upsert(cur, (
                         (dataset_id, cast(str, unit["Skolenhetskod"]), cast(bytes, shapely.geometry.Point(
                             float(unit["Besoksadress"]["GeoData"]["Koordinat_SweRef_E"].replace(",", ".")),
                             float(unit["Besoksadress"]["GeoData"]["Koordinat_SweRef_E"].replace(",", "."))
                         ).wkb), 3006, unit, datetime.fromisoformat(unit["Skolenhet_ValidFrom"]))
-                        for unit in units
+                        for unit in units if unit["Besoksadress"]["GeoData"]["Koordinat_SweRef_E"]
                     ), make_prefix(run_id))
 
             cur.execute("UPDATE upstream.dataset SET fetched_at = %s WHERE id = %s", (fetched_at, dataset_id))

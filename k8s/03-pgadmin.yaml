@@ -1,0 +1,128 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: osm
+  name: pgadmin
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: http
+      name: http
+  selector:
+    app.kubernetes.io/name: pgadmin
+  type: NodePort
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: osm
+  name: pgadmin
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "http://osm-auth.osm.svc.cluster.local/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://osm.jandal.se/auth/start?redirect=$pass_access_scheme://$http_host$escaped_request_uri"
+    nginx.ingress.kubernetes.io/auth-response-headers: "X-User-ID,X-User-Name"
+    nginx.ingress.kubernetes.io/auth-always-set-cookie: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - osm.jandal.se
+      secretName: osm-jandal-tls
+  rules:
+  - host: osm.jandal.se
+    http:
+      paths:
+      - path: /pgadmin
+        pathType: Prefix
+        backend:
+          service:
+            name: pgadmin
+            port:
+              name: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: osm
+  name: pgadmin
+spec:
+  serviceName: pgadmin
+  podManagementPolicy: Parallel
+  replicas: 1
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pgadmin
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pgadmin
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: pgadmin
+          image: dpage/pgadmin4:7.6
+          imagePullPolicy: Always
+          env:
+            - name: PGADMIN_DEFAULT_EMAIL
+              value: jan@dalheimer.de
+            - name: PGADMIN_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pgadmin-password
+                  key: pgadmin-password
+            - name: SCRIPT_NAME
+              value: /pgadmin
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          volumeMounts:
+            - name: pgadmin-config
+              mountPath: /pgadmin4/servers.json
+              subPath: servers.json
+              readOnly: true
+            - name: pgadmin-config
+              mountPath: /pgadmin4/config_local.py
+              subPath: config_local.py
+              readOnly: true
+            - name: pgadmin-data
+              mountPath: /var/lib/pgadmin
+      volumes:
+        - name: pgadmin-config
+          configMap:
+            name: pgadmin-config
+  volumeClaimTemplates:
+    - metadata:
+        namespace: osm
+        name: pgadmin-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 3Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: osm
+  name: pgadmin-config
+data:
+  config_local.py: |
+    AUTHENTICATION_SOURCES = ["webserver", "internal"]
+    WEBSERVER_AUTO_CREATE_USER = True
+    WEBSERVER_REMOTE_USER = "X-User-Name"
+  servers.json: |
+    {
+      "Servers": { "1": {
+        "Name": "OSM",
+        "Group": "Servers",
+        "Port": 5432,
+        "Username": "app",
+        "Host": "db-rw.osm.svc.cluster.local",
+        "SSLMode": "prefer",
+        "MaintenanceDB": "postgres"
+      } }
+    }

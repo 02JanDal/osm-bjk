@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: osm
+  name: pg-tileserv
+  labels:
+    app.kubernetes.io/name: pg-tileserv
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pg-tileserv
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pg-tileserv
+    spec:
+      containers:
+       - name: pg-tileserv
+         image: pramsey/pg_tileserv
+         ports:
+          - containerPort: 7800
+         env:
+          - name: PGUSER
+            valueFrom:
+              secretKeyRef:
+                name: pg-tileserv-user
+                key: username
+          - name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: pg-tileserv-user
+                key: password
+          - name: PGHOST
+            value: db-r
+          - name: PGDATABASE
+            value: app
+          - name: DATABASE_URI
+            value: postgresql://$(PGUSER):$(PGPASSWORD)@db-r/app
+          - name: TS_URLBASE
+            value: https://osm.jandal.se/tiles
+          - name: TS_BASEPATH
+            value: /tiles
+         securityContext:
+           allowPrivilegeEscalation: false
+           readOnlyRootFilesystem: true
+           runAsNonRoot: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: osm
+  name: pg-tileserv
+spec:
+  selector:
+    app.kubernetes.io/name: pg-tileserv
+  ports:
+   - protocol: TCP
+     port: 7800
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: osm
+  name: pg-tileserv
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - osm.jandal.se
+      secretName: osm-jandal-tls
+  rules:
+  - host: osm.jandal.se
+    http:
+      paths:
+      - path: /tiles
+        pathType: Prefix
+        backend:
+          service:
+            name: pg-tileserv
+            port:
+              number: 7800

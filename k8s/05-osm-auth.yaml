@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: osm
+  name: osm-auth
+spec:
+  selector:
+    app.kubernetes.io/name: osm-auth
+  ports:
+    - port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    # Fix for 'upstream sent too big header while reading response header from upstream'
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "8k"
+    cert-manager.io/cluster-issuer: letsencrypt
+  namespace: osm
+  name: osm-auth
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - osm.jandal.se
+      secretName: osm-jandal-tls
+  rules:
+  - host: osm.jandal.se
+    http:
+      paths:
+      - path: /auth
+        pathType: Prefix
+        backend:
+          service:
+            name: osm-auth
+            port:
+              number: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: osm
+  name: osm-auth
+  labels:
+    app.kubernetes.io/name: osm-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: osm-auth
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: osm-auth
+    spec:
+      containers:
+        - name: osm-auth
+          image: ghcr.io/02jandal/osm-bjk-osm_auth:main
+          imagePullPolicy: Always
+          env:
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: osm-auth
+                  key: cookie-secret
+            - name: CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-credentials
+                  key: client-id
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-credentials
+                  key: client-secret
+            - name: ADMIN_USERS
+              value: "9472254"
+            - name: ADMIN_ONLY_PATHS
+              value: "/pgadmin"
+          ports:
+            - containerPort: 80

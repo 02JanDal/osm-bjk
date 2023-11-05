@@ -1,0 +1,215 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: osm
+  name: postgrest
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: http
+      name: http
+  selector:
+    app.kubernetes.io/name: postgrest
+  type: NodePort
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: osm
+  name: postgrest
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - osm.jandal.se
+      secretName: osm-jandal-tls
+  rules:
+  - host: osm.jandal.se
+    http:
+      paths:
+      - path: /api(?!/rpc/gpx)(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: postgrest
+            port:
+              name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: osm
+  name: postgrest-gpx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /rpc/gpx
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Accept "text/xml";
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - osm.jandal.se
+      secretName: osm-jandal-tls
+  rules:
+  - host: osm.jandal.se
+    http:
+      paths:
+      - path: /api/rpc/gpx
+        pathType: Prefix
+        backend:
+          service:
+            name: postgrest
+            port:
+              name: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: osm
+  name: postgrest
+  labels:
+    app.kubernetes.io/name: postgrest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgrest
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgrest
+    spec:
+      containers:
+        - name: postgrest
+          image: postgrest/postgrest:v11.2.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: db-app
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-app
+                  key: password
+            - name: PGHOST
+              value: db-r
+            - name: PGDATABASE
+              value: app
+            - name: PGRST_SERVER_PORT
+              value: "8080"
+            - name: PGRST_ADMIN_SERVER_PORT
+              value: "8081"
+            - name: PGRST_DB_SCHEMAS
+              value: api
+            - name: PGRST_DB_EXTRA_SEARCH_PATH
+              value: api,public
+            - name: PGRST_OPENAPI_SERVER_PROXY_URI
+              value: https://osm.jandal.se/api
+            - name: PGRST_DB_ANON_ROLE
+              value: web_anon
+            - name: PGRST_DB_CONFIG
+              value: "False"
+            - name: PGRST_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: osm-auth
+                  key: cookie-secret
+            - name: PGRST_JWT_SECRET_IS_BASE64
+              value: "false"
+            - name: PGRST_JWT_AUD
+              value: "osm.jandal.se"
+            - name: PGRST_OPENAPI_MODE
+              value: "ignore-privileges"
+            - name: PGRST_DB_PLAN_ENABLED
+              value: "True"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: http-admin
+              containerPort: 8081
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: http-admin
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http-admin
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: osm
+  name: postgrest-swagger
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: http
+      name: http
+  selector:
+    app.kubernetes.io/name: postgrest-swagger
+  type: NodePort
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: osm
+  name: postgrest-swagger
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - osm.jandal.se
+      secretName: osm-jandal-tls
+  rules:
+  - host: osm.jandal.se
+    http:
+      paths:
+      - path: /api-docs
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: postgrest-swagger
+            port:
+              name: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: osm
+  name: postgrest-swagger
+  labels:
+    app.kubernetes.io/name: postgrest-swagger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgrest-swagger
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgrest-swagger
+    spec:
+      containers:
+        - name: postgrest-swagger
+          image: swaggerapi/swagger-ui:v5.9.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: SWAGGER_JSON_URL
+              value: "/api"
+            - name: BASE_URL
+              value: "/api-docs"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP

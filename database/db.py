@@ -1,10 +1,11 @@
 import sys
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from difflib import unified_diff
 from pathlib import Path
 from time import sleep, time
-from typing import Callable, Dict, Optional, List, NamedTuple, Literal
+from typing import NamedTuple, Literal
 
 import docker
 import psycopg
@@ -12,9 +13,12 @@ from colorama import init
 from docker.models.containers import Container
 from psycopg import Rollback
 from termcolor import cprint, colored
-from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileSystemMovedEvent
+from watchdog.events import (
+    FileSystemEventHandler,
+    FileSystemEvent,
+    FileSystemMovedEvent,
+)
 from watchdog.observers import Observer
-
 
 init()
 
@@ -25,7 +29,10 @@ directory_tests = directory / "tests"
 
 
 def migrations():
-    return sorted((e for e in directory_migrations.iterdir() if e.is_file() and e.name.split("-")[0].isdigit()), key=lambda item: item.name)
+    return sorted(
+        (e for e in directory_migrations.iterdir() if e.is_file() and e.name.split("-")[0].isdigit()),
+        key=lambda item: item.name,
+    )
 
 
 @contextmanager
@@ -45,8 +52,12 @@ def run_migration(conn: psycopg.Connection, running: Callable[[str], None]):
             conn.execute(file.read_text())
 
 
-def run_tests(conn: psycopg.Connection, running: Callable[[str], None], done: Callable[[Optional[str]], None]):
-    results: Dict[str, Optional[str]] = dict()
+def run_tests(
+    conn: psycopg.Connection,
+    running: Callable[[str], None],
+    done: Callable[[str | None], None],
+):
+    results: dict[str, str | None] = dict()
     for file in directory_tests.iterdir():
         if not file.is_file():
             continue
@@ -65,7 +76,8 @@ def run_tests(conn: psycopg.Connection, running: Callable[[str], None], done: Ca
 def run_test(conn: psycopg.Connection, file: Path):
     with conn.transaction():
         if file.suffix == ".sql":
-            conn.execute("""
+            conn.execute(
+                """
 CREATE OR REPLACE FUNCTION public.test(expected anyelement, actual anyelement) RETURNS BOOLEAN LANGUAGE 'plpgsql' AS $$
 DECLARE
     res BOOLEAN;
@@ -108,7 +120,8 @@ END; $$;
 CREATE OR REPLACE FUNCTION public.test(name text, expected integer, actual bigint) RETURNS BOOLEAN LANGUAGE 'sql' AS $$
     SELECT test(name, expected::bigint, actual);
 $$;
-            """)
+            """
+            )
             conn.execute(file.read_text())
         raise Rollback()
 
@@ -116,9 +129,14 @@ $$;
 def run_and_report_tests(conninfo: str):
     with psycopg.connect(conninfo) as conn:
         conn.add_notice_handler(lambda diag: print(diag.message_primary))
-        results = run_tests(conn,
-                            lambda name: print(f"  Running {name}...", end=""),
-                            lambda err: cprint(" SUCCESS" if err is None else f" FAILED: {err}", "green" if err is None else "red"))
+        results = run_tests(
+            conn,
+            lambda name: print(f"  Running {name}...", end=""),
+            lambda err: cprint(
+                " SUCCESS" if err is None else f" FAILED: {err}",
+                "green" if err is None else "red",
+            ),
+        )
     if any(1 for v in results.values() if v is not None):
         cprint("ERROR: Some tests failed", "red", file=sys.stderr)
     else:
@@ -127,7 +145,7 @@ def run_and_report_tests(conninfo: str):
 
 
 @contextmanager
-def setup():
+def setup() -> Iterator[tuple[str, Container]]:
     dkr = docker.from_env()
     with profile("Starting database container"):
         container: Container = dkr.containers.run(
@@ -135,7 +153,11 @@ def setup():
             detach=True,
             remove=True,
             ports={"5432/tcp": None},
-            environment=dict(POSTGRES_PASSWORD="postgres", POSTGRES_USER="postgres", POSTGRES_DB="app")
+            environment=dict(
+                POSTGRES_PASSWORD="postgres",
+                POSTGRES_USER="postgres",
+                POSTGRES_DB="app",
+            ),
         )
     try:
         while container.status != "running":
@@ -156,7 +178,9 @@ def setup():
             conn.execute("CREATE ROLE app")
             conn.execute("CREATE ROLE web_anon WITH NOLOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION")
             conn.execute("CREATE ROLE web_auth WITH NOLOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION")
-            conn.execute("CREATE ROLE web_tileserv WITH NOLOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION")
+            conn.execute(
+                "CREATE ROLE web_tileserv WITH NOLOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION"
+            )
 
         yield conninfo, container
     except psycopg.errors.ProgrammingError as e:
@@ -195,15 +219,15 @@ def migrate():
 class Change(NamedTuple):
     at: datetime
     action: Literal["run-test", "run-tests", "run-migration", "run-migrations"]
-    file: Optional[Path] = None
+    file: Path | None = None
 
 
 class WatchHandler(FileSystemEventHandler):
     def __init__(self, conninfo: str, container: Container):
         self._conninfo = conninfo
         self._container = container
-        self._test_results: Dict[str, Optional[str]] = dict()
-        self._changes: List[Change] = []
+        self._test_results: dict[str, str | None] = dict()
+        self._changes: list[Change] = []
         self._run_migrations()
 
     def on_created(self, event: FileSystemEvent):
@@ -251,10 +275,18 @@ class WatchHandler(FileSystemEventHandler):
         elif run_tsts:
             self._changes = [run_tsts]
         else:
-            paths = set(c.file for c in self._changes)
-            self._changes = sorted([Change(max((c.at for c in self._changes if c.file == path)), "run-test", path)
-                                    for path in paths],
-                                   key=lambda c: c.at)
+            paths = {c.file for c in self._changes}
+            self._changes = sorted(
+                [
+                    Change(
+                        max(c.at for c in self._changes if c.file == path),
+                        "run-test",
+                        path,
+                    )
+                    for path in paths
+                ],
+                key=lambda c: c.at,
+            )
 
         now = datetime.now()
         due = [c for c in self._changes if (now - c.at).total_seconds() > 0.5]
@@ -271,7 +303,7 @@ class WatchHandler(FileSystemEventHandler):
                 self._run_test(change.file)
 
     def _run_test(self, file: Path):
-        res: List[str] = []
+        res: list[str] = []
         with profile(f"Running test {file.name}"):
             with psycopg.connect(self._conninfo) as conn:
                 conn.add_notice_handler(lambda diag: res.append(diag.message_primary))
@@ -349,7 +381,11 @@ def pg_dump_schema(container: Container):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        cprint("ERROR: Invalid command, must specify one of test, migrate or watch", "red", file=sys.stderr)
+        cprint(
+            "ERROR: Invalid command, must specify one of test, migrate or watch",
+            "red",
+            file=sys.stderr,
+        )
     elif sys.argv[1] == "test":
         test()
     elif sys.argv[1] == "migrate":
@@ -357,4 +393,8 @@ if __name__ == "__main__":
     elif sys.argv[1] == "watch":
         watch()
     else:
-        cprint("ERROR: Invalid command, must specify one of test, migrate or watch", "red", file=sys.stderr)
+        cprint(
+            "ERROR: Invalid command, must specify one of test, migrate or watch",
+            "red",
+            file=sys.stderr,
+        )

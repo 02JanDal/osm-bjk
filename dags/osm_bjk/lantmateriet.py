@@ -1,5 +1,6 @@
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator, Literal, TypedDict
+from typing import Literal, TypedDict
 
 from airflow.hooks.base import BaseHook
 from requests import Session
@@ -11,9 +12,11 @@ TOKEN_URL = "https://apimanager.lantmateriet.se/oauth2/token"
 def lantmateriet() -> Generator[Session, None, None]:
     with Session() as sess:
         conn = BaseHook.get_connection("LM_OAUTH2")
-        token_resp = sess.post("https://apimanager.lantmateriet.se/oauth2/token",
-                               auth=(conn.login, conn.password),
-                               params=dict(grant_type="client_credentials"))
+        token_resp = sess.post(
+            "https://apimanager.lantmateriet.se/oauth2/token",
+            auth=(conn.login, conn.password),
+            params=dict(grant_type="client_credentials"),
+        )
         token_resp.raise_for_status()
         token = token_resp.json()["access_token"]
         sess.headers["Content-Type"] = "application/json"

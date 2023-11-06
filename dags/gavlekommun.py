@@ -1,17 +1,27 @@
 import os
 from datetime import timedelta, datetime
 from tempfile import TemporaryDirectory
-from typing import Any, Optional
+from typing import Any, TypedDict
 from urllib.request import urlretrieve
 
 import geopandas as gpd
 import pandas as pd
-from airflow import DAG, Dataset
 
+from airflow import DAG, Dataset
 from osm_bjk.fetch_dataframe_operator import FetchDataframeOperator
 from osm_bjk.licenses import CC0_1_0
 
-args = dict(
+
+class DAGArgs(TypedDict):
+    schedule_interval: timedelta
+    start_date: datetime
+    catchup: bool
+    max_active_runs: int
+    default_args: dict
+    tags: list[str]
+
+
+args: DAGArgs = dict(
     schedule_interval=timedelta(days=28),
     start_date=datetime(2023, 9, 16, 21, 30),
     catchup=False,
@@ -22,13 +32,13 @@ args = dict(
         email_on_failure=True,
         email_on_retry=False,
         retries=1,
-        retry_delay=timedelta(minutes=5)
+        retry_delay=timedelta(minutes=5),
     ),
-    tags=["provider:Gävle kommun"]
+    tags=["provider:Gävle kommun"],
 )
 
 
-def parse_gavle_datetime(v: Any) -> Optional[datetime]:
+def parse_gavle_datetime(v: Any) -> datetime | None:
     if str(v) == "nan" or v is None:
         return None
     v = str(v).split(".")[0]
@@ -63,9 +73,9 @@ datasets = [
 
 for name, identifier, resource, entry in datasets:
     with DAG(
-            f"gavlekommun-{identifier}",
-            description=f"Hämtar {name} från Gävle kommun",
-            **args
+        f"gavlekommun-{identifier}",
+        description=f"Hämtar {name} från Gävle kommun",
+        **args,
     ):
         FetchDataframeOperator(
             task_id="fetch",
@@ -74,15 +84,16 @@ for name, identifier, resource, entry in datasets:
             dataset=name,
             dataset_url=f"https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry={entry}&esc_context=1",
             license=CC0_1_0,
-            outlets=[Dataset(f"psql://upstream/gavlekommun/{identifier}")]
+            outlets=[Dataset(f"psql://upstream/gavlekommun/{identifier}")],
         )
 
 
 with DAG(
-        f"gavlekommun-skolor",
-        description=f"Hämtar Kommunala och privata skolor från Gävle kommun",
-        **args
+    f"gavlekommun-skolor",
+    description=f"Hämtar Kommunala och privata skolor från Gävle kommun",
+    **args,
 ):
+
     def fetch_skolor(*_args, **_kwargs):
         df = pd.read_csv("https://catalog.gavle.se/store/1/resource/38")
         geom = gpd.points_from_xy(df.long, df.lat, crs="EPSG:4326")
@@ -95,7 +106,7 @@ with DAG(
         dataset="Kommunala och privata skolor",
         dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=6&esc_context=1",
         license=CC0_1_0,
-        outlets=[Dataset("psql://upstream/gavlekommun/skolor")]
+        outlets=[Dataset("psql://upstream/gavlekommun/skolor")],
     )
 
 
@@ -113,16 +124,19 @@ class FetchExtract:
             print(f"Reading {self.member}...")
             df = gpd.read_file(f"zip://{zipname}!{self.member}")
             if "UPDDATUM" in df:
-                df['bjk__updatedAt'] = df.UPDDATUM.apply(parse_gavle_datetime)
+                df["bjk__updatedAt"] = df.UPDDATUM.apply(parse_gavle_datetime)
             return df
 
 
 with DAG(
-        f"gavlekommun-byggnader",
-        description=f"Hämtar Baskarta Byggnader från Gävle kommun",
-        **args
+    f"gavlekommun-byggnader",
+    description=f"Hämtar Baskarta Byggnader från Gävle kommun",
+    **args,
 ):
-    for identifier, file in [("byggnad", "baskarta_byggnad.json"), ("byggnadsbeteckning", "baskarta_byggnadsbeteckning.json")]:
+    for identifier, file in [
+        ("byggnad", "baskarta_byggnad.json"),
+        ("byggnadsbeteckning", "baskarta_byggnadsbeteckning.json"),
+    ]:
         FetchDataframeOperator(
             task_id=f"fetch-{identifier}",
             fetch=FetchExtract("76", file),
@@ -130,15 +144,18 @@ with DAG(
             dataset=f"Baskarta Byggnader ({identifier})",
             dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=20&esc_context=1",
             license=CC0_1_0,
-            outlets=[Dataset(f"psql://upstream/gavlekommun/byggnader-{identifier}")]
+            outlets=[Dataset(f"psql://upstream/gavlekommun/byggnader-{identifier}")],
         )
 
 with DAG(
-        f"gavlekommun-parkeringar",
-        description=f"Hämtar Parkeringar från Gävle kommun",
-        **args
+    f"gavlekommun-parkeringar",
+    description=f"Hämtar Parkeringar från Gävle kommun",
+    **args,
 ):
-    for identifier, file in [("parkeringsplatser", "Parkering_L.json"), ("parkeringszoner", "Parkering_A.json")]:
+    for identifier, file in [
+        ("parkeringsplatser", "Parkering_L.json"),
+        ("parkeringszoner", "Parkering_A.json"),
+    ]:
         FetchDataframeOperator(
             task_id=f"fetch-{identifier}",
             fetch=FetchExtract("115", file),
@@ -146,13 +163,13 @@ with DAG(
             dataset=f"Parkeringar ({identifier})",
             dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=112&esc_context=1",
             license=CC0_1_0,
-            outlets=[Dataset(f"psql://upstream/gavlekommun/parkeringar-{identifier}")]
+            outlets=[Dataset(f"psql://upstream/gavlekommun/parkeringar-{identifier}")],
         )
 
 with DAG(
-        f"gavlekommun-tillganglighet",
-        description=f"Hämtar Tillgänglighet från Gävle kommun",
-        **args
+    f"gavlekommun-tillganglighet",
+    description=f"Hämtar Tillgänglighet från Gävle kommun",
+    **args,
 ):
     for name, file in [
         ("inventerade områden", "inventerade_omraden"),
@@ -161,7 +178,7 @@ with DAG(
         ("huvudgångstråk", "huvudgangstrak"),
         ("passager", "passager"),
         ("parkering för rörelsehindrad", "parkering_rorelsehindrad"),
-        ("belysning", "belysning")
+        ("belysning", "belysning"),
     ]:
         FetchDataframeOperator(
             task_id=f"fetch-{file}",
@@ -170,14 +187,10 @@ with DAG(
             dataset=f"Tillgänglighet ({name})",
             dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=327&esc_context=1",
             license=CC0_1_0,
-            outlets=[Dataset(f"psql://upstream/gavlekommun/tillganglighet-{file}")]
+            outlets=[Dataset(f"psql://upstream/gavlekommun/tillganglighet-{file}")],
         )
 
-with DAG(
-        f"gavlekommun-cykelplan",
-        description=f"Hämtar Cykelplan från Gävle kommun",
-        **args
-):
+with DAG(f"gavlekommun-cykelplan", description=f"Hämtar Cykelplan från Gävle kommun", **args):
     for name, file in [
         ("befintligt cykelnät", "Befintligt_Cykelnat"),
         ("målpunkter", "Malpunkter"),
@@ -192,14 +205,15 @@ with DAG(
             dataset=f"Cykelplan ({name})",
             dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=438&esc_context=1",
             license=CC0_1_0,
-            outlets=[Dataset(f"psql://upstream/gavlekommun/cykelplan-{file.lower()}")]
+            outlets=[Dataset(f"psql://upstream/gavlekommun/cykelplan-{file.lower()}")],
         )
 
 with DAG(
-        f"gavlekommun-detaljer",
-        description=f"Hämtar Baskarta Detaljer från Gävle kommun",
-        **args
+    f"gavlekommun-detaljer",
+    description=f"Hämtar Baskarta Detaljer från Gävle kommun",
+    **args,
 ):
+
     def fetch_detaljer(*_args, **_kwargs):
         with TemporaryDirectory() as directory:
             zipname = os.path.join(directory, "data.zip")
@@ -211,7 +225,7 @@ with DAG(
             print(f"Reading punktobjekt...")
             df_punkt = gpd.read_file(f"zip://{zipname}!baskarta_punktobjekt.json")
             df = gpd.GeoDataFrame(pd.concat([df_linje, df_punkt], ignore_index=True), crs=df_linje.crs)
-            df['bjk__updatedAt'] = df.UPDDATUM.apply(parse_gavle_datetime)
+            df["bjk__updatedAt"] = df.UPDDATUM.apply(parse_gavle_datetime)
             return df
 
     FetchDataframeOperator(
@@ -221,13 +235,13 @@ with DAG(
         dataset=f"Baskarta Detaljer",
         dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=63&esc_context=1",
         license=CC0_1_0,
-        outlets=[Dataset(f"psql://upstream/gavlekommun/detaljer")]
+        outlets=[Dataset(f"psql://upstream/gavlekommun/detaljer")],
     )
 
 with DAG(
-        f"gavlekommun-motionsspar",
-        description=f"Hämtar Motionsspår från Gävle kommun",
-        **args
+    f"gavlekommun-motionsspar",
+    description=f"Hämtar Motionsspår från Gävle kommun",
+    **args,
 ):
     for name, file in [
         ("motionsspår", "motionsspar"),
@@ -240,13 +254,13 @@ with DAG(
             dataset=f"Motionsspår ({name})",
             dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=8&esc_context=1",
             license=CC0_1_0,
-            outlets=[Dataset(f"psql://upstream/gavlekommun/motionsspar-{file.lower()}")]
+            outlets=[Dataset(f"psql://upstream/gavlekommun/motionsspar-{file.lower()}")],
         )
 
 with DAG(
-        f"gavlekommun-vatten",
-        description=f"Hämtar Baskarta Vatten från Gävle kommun",
-        **args
+    f"gavlekommun-vatten",
+    description=f"Hämtar Baskarta Vatten från Gävle kommun",
+    **args,
 ):
     for name, file in [
         ("strandlinje", "strandlinje"),
@@ -259,7 +273,7 @@ with DAG(
             dataset=f"Baskarta Vatten ({name})",
             dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=62&esc_context=1",
             license=CC0_1_0,
-            outlets=[Dataset(f"psql://upstream/gavlekommun/vatten-{file.lower()}")]
+            outlets=[Dataset(f"psql://upstream/gavlekommun/vatten-{file.lower()}")],
         )
 
     def fetch_vattenobjekt(*_args, **_kwargs):
@@ -274,8 +288,11 @@ with DAG(
             df_punkt = gpd.read_file(f"zip://{zipname}!baskarta_vattenobjekt_punkt.json")
             print(f"Reading ytaobjekt...")
             df_yta = gpd.read_file(f"zip://{zipname}!baskarta_vattenobjekt_yta.json")
-            df = gpd.GeoDataFrame(pd.concat([df_linje, df_punkt, df_yta], ignore_index=True), crs=df_linje.crs)
-            df['bjk__updatedAt'] = df.UPDDATUM.apply(parse_gavle_datetime)
+            df = gpd.GeoDataFrame(
+                pd.concat([df_linje, df_punkt, df_yta], ignore_index=True),
+                crs=df_linje.crs,
+            )
+            df["bjk__updatedAt"] = df.UPDDATUM.apply(parse_gavle_datetime)
             return df
 
     FetchDataframeOperator(
@@ -285,14 +302,10 @@ with DAG(
         dataset=f"Baskarta Vatten",
         dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=62&esc_context=1",
         license=CC0_1_0,
-        outlets=[Dataset(f"psql://upstream/gavlekommun/vatten-vattenobjekt")]
+        outlets=[Dataset(f"psql://upstream/gavlekommun/vatten-vattenobjekt")],
     )
 
-with DAG(
-        f"gavlekommun-vagar",
-        description=f"Hämtar Baskarta Vägar från Gävle kommun",
-        **args
-):
+with DAG(f"gavlekommun-vagar", description=f"Hämtar Baskarta Vägar från Gävle kommun", **args):
     for name, file in [
         ("järnväg", "jarnvag"),
         ("väg", "vag"),
@@ -304,5 +317,5 @@ with DAG(
             dataset=f"Baskarta Vägar ({name})",
             dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=56&esc_context=1",
             license=CC0_1_0,
-            outlets=[Dataset(f"psql://upstream/gavlekommun/vagar-{file.lower()}")]
+            outlets=[Dataset(f"psql://upstream/gavlekommun/vagar-{file.lower()}")],
         )

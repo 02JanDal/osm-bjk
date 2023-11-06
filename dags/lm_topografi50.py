@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime, timedelta
 
 import geopandas
@@ -8,14 +9,23 @@ from airflow.models import Variable, TaskInstance
 from airflow.sensors.base import PokeReturnValue
 
 from osm_bjk.fetch_dataframe_operator import FetchDataframeOperator
-from osm_bjk.lantmateriet import lantmateriet, lm_order_start_delivery, lm_order_get_delivery, lm_order_get_files, \
-    FileData
+from osm_bjk.lantmateriet import (
+    lantmateriet,
+    lm_order_start_delivery,
+    lm_order_get_delivery,
+    lm_order_get_files,
+    FileData,
+)
 from osm_bjk.licenses import CC0_1_0
 
 
-from typing import TYPE_CHECKING, TypedDict, Literal
+from typing import TYPE_CHECKING, TypedDict, Literal, List
+
 if TYPE_CHECKING:
-    from typing import NotRequired
+    if sys.version_info < (3, 11):
+        from typing_extensions import NotRequired
+    else:
+        from typing import NotRequired
 
 
 class Sublayer(TypedDict):
@@ -29,16 +39,83 @@ class Layer(TypedDict):
 
 
 LAYERS = [
-    Layer(name="Administrativ indelning", sublayers=[Sublayer(name="Administrativ gräns"), Sublayer(name="Riksröse")]),
-    Layer(name="Anläggningsområde", sublayers=[Sublayer(name="Anläggningsområde"), Sublayer(name="Anläggningsområdespunkt"), Sublayer(name="Start- och landningsbana", slug="start_landningsbana"), Sublayer(name="Flygplatsområde"), Sublayer(name="Flygplatspunkt")]),
-    Layer(name="Byggnadsverk", sublayers=[Sublayer(name="Byggnad"), Sublayer(name="Byggnadsanläggningslinje"), Sublayer(name="Byggnadsanläggningspunkt"), Sublayer(name="Byggnadspunkt")]),
-    Layer(name="Hydrografi", sublayers=[Sublayer(name="Hydroanläggningslinje"), Sublayer(name="Hydroanläggningspunkt"), Sublayer(name="Hydrografiskt intressant plats"), Sublayer(name="Hydrolinje"), Sublayer(name="Hydropunkt")]),
-    Layer(name="Kommunikation", sublayers=[Sublayer(name="Vägpunkt"), Sublayer(name="Färjeled"), Sublayer(name="Övrig väg"), Sublayer(name="Transportled fjäll"), Sublayer(name="Ledintressepunkt fjäll")]),
-    Layer(name="Kulturhistorisk lämning", sublayers=[Sublayer(name="Kulturhistorisk lämning, linje", slug="kultur_lamning_linje"), Sublayer(name="Kulturhistorisk lämning, punkt", slug="kultur_lamning_punkt")]),
-    Layer(name="Ledningar", sublayers=[Sublayer(name="Ledningslinje"), Sublayer(name="Transformatorområde"), Sublayer(name="Transformatorområdespunkt")]),
-    Layer(name="Mark", sublayers=[Sublayer(name="Mark"), Sublayer(name="Markkantlinje"), Sublayer(name="Sankmark"), Sublayer(name="Markframkomlighet")]),
+    Layer(
+        name="Administrativ indelning",
+        sublayers=[Sublayer(name="Administrativ gräns"), Sublayer(name="Riksröse")],
+    ),
+    Layer(
+        name="Anläggningsområde",
+        sublayers=[
+            Sublayer(name="Anläggningsområde"),
+            Sublayer(name="Anläggningsområdespunkt"),
+            Sublayer(name="Start- och landningsbana", slug="start_landningsbana"),
+            Sublayer(name="Flygplatsområde"),
+            Sublayer(name="Flygplatspunkt"),
+        ],
+    ),
+    Layer(
+        name="Byggnadsverk",
+        sublayers=[
+            Sublayer(name="Byggnad"),
+            Sublayer(name="Byggnadsanläggningslinje"),
+            Sublayer(name="Byggnadsanläggningspunkt"),
+            Sublayer(name="Byggnadspunkt"),
+        ],
+    ),
+    Layer(
+        name="Hydrografi",
+        sublayers=[
+            Sublayer(name="Hydroanläggningslinje"),
+            Sublayer(name="Hydroanläggningspunkt"),
+            Sublayer(name="Hydrografiskt intressant plats"),
+            Sublayer(name="Hydrolinje"),
+            Sublayer(name="Hydropunkt"),
+        ],
+    ),
+    Layer(
+        name="Kommunikation",
+        sublayers=[
+            Sublayer(name="Vägpunkt"),
+            Sublayer(name="Färjeled"),
+            Sublayer(name="Övrig väg"),
+            Sublayer(name="Transportled fjäll"),
+            Sublayer(name="Ledintressepunkt fjäll"),
+        ],
+    ),
+    Layer(
+        name="Kulturhistorisk lämning",
+        sublayers=[
+            Sublayer(name="Kulturhistorisk lämning, linje", slug="kultur_lamning_linje"),
+            Sublayer(name="Kulturhistorisk lämning, punkt", slug="kultur_lamning_punkt"),
+        ],
+    ),
+    Layer(
+        name="Ledningar",
+        sublayers=[
+            Sublayer(name="Ledningslinje"),
+            Sublayer(name="Transformatorområde"),
+            Sublayer(name="Transformatorområdespunkt"),
+        ],
+    ),
+    Layer(
+        name="Mark",
+        sublayers=[
+            Sublayer(name="Mark"),
+            Sublayer(name="Markkantlinje"),
+            Sublayer(name="Sankmark"),
+            Sublayer(name="Markframkomlighet"),
+        ],
+    ),
     Layer(name="Militärt område", sublayers=[Sublayer(name="Militärt område")]),
-    Layer(name="Naturvård", sublayers=[Sublayer(name="Naturvårdspunkt"), Sublayer(name="Naturvårdslinje"), Sublayer(name="Restriktionsområde"), Sublayer(name="Skyddad natur", slug="skyddadnatur")]),
+    Layer(
+        name="Naturvård",
+        sublayers=[
+            Sublayer(name="Naturvårdspunkt"),
+            Sublayer(name="Naturvårdslinje"),
+            Sublayer(name="Restriktionsområde"),
+            Sublayer(name="Skyddad natur", slug="skyddadnatur"),
+        ],
+    ),
     Layer(name="Text", sublayers=[Sublayer(name="Textlinje"), Sublayer(name="textpunkt")]),
 ]
 
@@ -56,27 +133,28 @@ class FetchBase:
         files: list[FileData] = ti.xcom_pull(task_ids="check_ready")
         file = next(f for f in files if f["title"] == f"{self.layer}_sverige.zip")
         df = geopandas.read_file(file["href"], layer=self.sublayer).set_index("objektidentitet")
-        df['bjk__updatedAt'] = pd.to_datetime(df['skapad'])
+        df["bjk__updatedAt"] = pd.to_datetime(df["skapad"])
         return df
 
 
 with DAG(
-        "lm-topografi50-init",
-        description="Hämtar Topografi 50 från Lantmäteriet (BAS)",
-        schedule_interval=None,
-        start_date=datetime(2023, 9, 16, 21, 30),
-        catchup=False,
-        max_active_runs=1,
-        default_args=dict(
-            depends_on_past=False,
-            email=["jan@dalheimer.de"],
-            email_on_failure=True,
-            email_on_retry=False,
-            retries=1,
-            retry_delay=timedelta(minutes=5)
-        ),
-        tags=["provider:Lantmäteriet"]
+    "lm-topografi50-init",
+    description="Hämtar Topografi 50 från Lantmäteriet (BAS)",
+    schedule_interval=None,
+    start_date=datetime(2023, 9, 16, 21, 30),
+    catchup=False,
+    max_active_runs=1,
+    default_args=dict(
+        depends_on_past=False,
+        email=["jan@dalheimer.de"],
+        email_on_failure=True,
+        email_on_retry=False,
+        retries=1,
+        retry_delay=timedelta(minutes=5),
+    ),
+    tags=["provider:Lantmäteriet"],
 ):
+
     @task()
     def start():
         with lantmateriet() as sess:
@@ -97,8 +175,8 @@ with DAG(
 
     for layer in LAYERS:
         for sublayer in layer["sublayers"]:
-            layer_slug = to_slug(layer['name'])
-            sublayer_slug = sublayer['slug'] if 'slug' in sublayer else to_slug(sublayer['name'], "_")
+            layer_slug = to_slug(layer["name"])
+            sublayer_slug = sublayer["slug"] if "slug" in sublayer else to_slug(sublayer["name"], "_")
             op = FetchDataframeOperator(
                 task_id=f"fetch-{layer_slug}-{sublayer_slug}",
                 fetch=FetchBase(layer_slug, sublayer_slug),
@@ -106,26 +184,26 @@ with DAG(
                 dataset=f"Topografi 50 ({layer['name']} - {sublayer['name']})",
                 dataset_url="https://www.lantmateriet.se/sv/geodata/vara-produkter/produktlista/topografi-50-nedladdning-vektor/",
                 license=CC0_1_0,
-                outlets=[Dataset(f"psql://upstream/lm/topo50/{layer_slug}/{sublayer_slug}")]
+                outlets=[Dataset(f"psql://upstream/lm/topo50/{layer_slug}/{sublayer_slug}")],
             )
             check_ready_t >> op
 
 
 with DAG(
-        "lm-topografi50-update",
-        description="Hämtar Topografi 50 från Lantmäteriet (FÖRÄNDRING)",
-        schedule_interval=None,
-        start_date=datetime(2023, 9, 16, 21, 30),
-        catchup=False,
-        max_active_runs=1,
-        default_args=dict(
-            depends_on_past=False,
-            email=["jan@dalheimer.de"],
-            email_on_failure=True,
-            email_on_retry=False,
-            retries=1,
-            retry_delay=timedelta(minutes=5)
-        ),
-        tags=["provider:Lantmäteriet"]
+    "lm-topografi50-update",
+    description="Hämtar Topografi 50 från Lantmäteriet (FÖRÄNDRING)",
+    schedule_interval=None,
+    start_date=datetime(2023, 9, 16, 21, 30),
+    catchup=False,
+    max_active_runs=1,
+    default_args=dict(
+        depends_on_past=False,
+        email=["jan@dalheimer.de"],
+        email_on_failure=True,
+        email_on_retry=False,
+        retries=1,
+        retry_delay=timedelta(minutes=5),
+    ),
+    tags=["provider:Lantmäteriet"],
 ):
     pass

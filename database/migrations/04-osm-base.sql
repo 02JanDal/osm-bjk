@@ -15,7 +15,7 @@ DO $$ BEGIN
     CREATE TYPE osm.osm_meta AS (
         timestamp TIMESTAMPTZ,
         user_id BIGINT,
-        version INTEGER
+        version BIGINT
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
 COMMENT ON TYPE osm.osm_meta IS 'Meta information about an OSM item';
@@ -50,7 +50,7 @@ CREATE INDEX IF NOT EXISTS way_geom_idx ON osm.way USING gist (geom);
 CREATE TABLE IF NOT EXISTS osm.way_node (
     node_id BIGINT NOT NULL REFERENCES osm.node(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
     way_id BIGINT NOT NULL REFERENCES osm.way(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
-    sequence_order INTEGER NOT NULL,
+    sequence_order BIGINT NOT NULL,
     CONSTRAINT way_node_way_id_sequence_order_key UNIQUE (way_id, sequence_order) DEFERRABLE INITIALLY DEFERRED
 );
 CREATE INDEX IF NOT EXISTS idx_way_node_node ON osm.way_node USING btree (node_id);
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS osm.relation_member_node (
     relation_id BIGINT NOT NULL REFERENCES osm.relation(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
     member_id BIGINT NOT NULL REFERENCES osm.node(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
     role TEXT,
-    sequence_order INTEGER NOT NULL,
+    sequence_order BIGINT NOT NULL,
     CONSTRAINT relation_member_node_relation_id_sequence_order_key UNIQUE (relation_id, sequence_order) DEFERRABLE INITIALLY DEFERRED
 );
 CREATE INDEX IF NOT EXISTS idx_relation_member_node_member ON osm.relation_member_node USING btree (member_id);
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS osm.relation_member_relation (
     relation_id BIGINT NOT NULL REFERENCES osm.relation(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
     member_id BIGINT NOT NULL REFERENCES osm.relation(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
     role TEXT,
-    sequence_order INTEGER NOT NULL,
+    sequence_order BIGINT NOT NULL,
     CONSTRAINT relation_member_relation_relation_id_sequence_order_key UNIQUE (relation_id, sequence_order) DEFERRABLE INITIALLY DEFERRED
 );
 CREATE INDEX IF NOT EXISTS idx_relation_member_relation_member ON osm.relation_member_relation USING btree (member_id);
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS osm.relation_member_way (
     relation_id BIGINT NOT NULL REFERENCES osm.relation(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
     member_id BIGINT NOT NULL REFERENCES osm.way(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
     role TEXT,
-    sequence_order INTEGER NOT NULL,
+    sequence_order BIGINT NOT NULL,
     CONSTRAINT relation_member_way_relation_id_sequence_order_key UNIQUE (relation_id, sequence_order) DEFERRABLE INITIALLY DEFERRED
 );
 CREATE INDEX IF NOT EXISTS idx_relation_member_way_member ON osm.relation_member_way USING btree (member_id);

@@ -1,14 +1,13 @@
 import os
 from datetime import datetime, timedelta, timezone
 from secrets import token_hex
-from typing import Optional, Literal
+from typing import Literal
 from urllib.parse import quote_plus
 
+import jwt
 from aiohttp import ClientSession
 from fastapi import FastAPI, Response, Cookie, Header, Query
 from pydantic import BaseModel
-
-import jwt
 from starlette.responses import RedirectResponse
 
 app = FastAPI()
@@ -20,7 +19,9 @@ SCOPES = ["read_prefs", "write_api", "write_notes"]
 BASE = os.environ.get("BASE", "https://osm.jandal.se")
 CLIENT_ID = os.environ.get("CLIENT_ID")
 CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
-SECRET = os.environ.get("SECRET")
+SECRET = os.environ.get("SECRET", "")
+if not SECRET:
+    raise ValueError("You must specify a SECRET")
 ADMIN_USERS = [int(v.strip()) for v in os.environ.get("ADMIN_USERS", "").split(",")]
 ADMIN_ONLY_PATHS = os.environ.get("ADMIN_ONLY_PATHS", "").split(",")
 
@@ -62,34 +63,43 @@ class TokenContent(BaseModel):
 
 @app.get("/auth/callback")
 async def callback(code: str, state: str, osm_temporary: str | None = Cookie(default=None)):
-    osm_temporary = jwt.decode(
+    if not osm_temporary:
+        return Response(status_code=400)
+
+    osm_temporary_decoded = jwt.decode(
         osm_temporary,
         SECRET,
         issuer="osm.jandal.se",
         audience="osm.jandal.se",
-        algorithms=["HS256"]
+        algorithms=["HS256"],
     )
-    redirect = osm_temporary["redirect"]
+    redirect = osm_temporary_decoded["redirect"]
     response = RedirectResponse(BASE + (redirect if redirect and redirect.startswith("/") else "/"))
 
-    if osm_temporary["state"] != state:
+    if osm_temporary_decoded["state"] != state:
         response.status_code = 400
         return response
 
     async with ClientSession() as session:
-        async with session.post(TOKEN_URL, data=dict(
-            code=code,
-            grant_type="authorization_code",
-            redirect_uri=BASE + "/auth/callback",
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET
-        )) as resp:
+        async with session.post(
+            TOKEN_URL,
+            data=dict(
+                code=code,
+                grant_type="authorization_code",
+                redirect_uri=BASE + "/auth/callback",
+                client_id=CLIENT_ID,
+                client_secret=CLIENT_SECRET,
+            ),
+        ) as resp:
             if not resp.ok:
                 response.status_code = 400
                 return response
             raw = await resp.json()
             token_response = AccessTokenResponse(**raw)
-        async with session.get("https://api.openstreetmap.org/api/0.6/user/details.json", headers=dict(Authorization="Bearer " + token_response.access_token)) as resp:
+        async with session.get(
+            "https://api.openstreetmap.org/api/0.6/user/details.json",
+            headers=dict(Authorization="Bearer " + token_response.access_token),
+        ) as resp:
             if not resp.ok:
                 response.status_code = 400
                 return response
@@ -98,18 +108,28 @@ async def callback(code: str, state: str, osm_temporary: str | None = Cookie(def
         token = TokenContent(
             access_token=token_response.access_token,
             user_id=user_response.user.id,
-            user_name=user_response.user.display_name
+            user_name=user_response.user.display_name,
         )
-        token_encoded = jwt.encode(dict(
-            **token.model_dump(mode="json"),
-            role="web_auth",
-            nbf=token_response.created_at,
-            iat=token_response.created_at,
-            aud="osm.jandal.se",
-            iss="openstreetmap.org"
-        ), SECRET, algorithm="HS256")
-        response.set_cookie("osm_session", token_encoded,
-                            httponly=True, secure=True, domain="osm.jandal.se", samesite="lax")
+        token_encoded = jwt.encode(
+            dict(
+                **token.model_dump(mode="json"),
+                role="web_auth",
+                nbf=token_response.created_at,
+                iat=token_response.created_at,
+                aud="osm.jandal.se",
+                iss="openstreetmap.org",
+            ),
+            SECRET,
+            algorithm="HS256",
+        )
+        response.set_cookie(
+            "osm_session",
+            token_encoded,
+            httponly=True,
+            secure=True,
+            domain="osm.jandal.se",
+            samesite="lax",
+        )
 
     return response
 
@@ -123,27 +143,46 @@ def start(redirect: str | None = Query(default=None)):
     )
     now = datetime.now(tz=timezone.utc)
     expiry = now + timedelta(minutes=3)
-    response.set_cookie("osm_temporary", jwt.encode(dict(
-        redirect=redirect,
-        state=state,
-        nbf=now,
-        iat=now,
-        exp=expiry,
-        iss="osm.jandal.se",
-        aud="osm.jandal.se"
-    ), SECRET, algorithm="HS256"),
-                        httponly=True, secure=True, domain="osm.jandal.se", samesite="strict", expires=expiry)
+    response.set_cookie(
+        "osm_temporary",
+        jwt.encode(
+            dict(
+                redirect=redirect,
+                state=state,
+                nbf=now,
+                iat=now,
+                exp=expiry,
+                iss="osm.jandal.se",
+                aud="osm.jandal.se",
+            ),
+            SECRET,
+            algorithm="HS256",
+        ),
+        httponly=True,
+        secure=True,
+        domain="osm.jandal.se",
+        samesite="strict",
+        expires=expiry,
+    )
     return response
 
 
 @app.get("/auth")
 def auth(
-        response: Response,
-        osm_session: str | None = Cookie(default=None),
-        x_original_url: str = Header()
+    response: Response,
+    osm_session: str | None = Cookie(default=None),
+    x_original_url: str = Header(),
 ):
     if osm_session:
-        token = TokenContent(**jwt.decode(osm_session, SECRET, audience="osm.jandal.se", issuer="openstreetmap.org", algorithms=["HS256"]))
+        token = TokenContent(
+            **jwt.decode(
+                osm_session,
+                SECRET,
+                audience="osm.jandal.se",
+                issuer="openstreetmap.org",
+                algorithms=["HS256"],
+            )
+        )
         if token:
             response.headers["X-User-ID"] = str(token.user_id)
             response.headers["X-User-Name"] = token.user_name

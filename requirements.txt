@@ -1,0 +1,2 @@
+pre-commit==3.5.0
+-r database/requirements.txt

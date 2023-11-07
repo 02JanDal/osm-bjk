@@ -64,6 +64,7 @@ export type DeviationRow = {
     url?: string;
     original_id?: string;
     geometry: object;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     original_attributes: Record<string, any>;
     updated_at?: string;
   };

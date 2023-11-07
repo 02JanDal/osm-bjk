@@ -24,7 +24,7 @@ const Page: FC = () => {
   const filteredDatasets = datasets.data!.filter(
     (d) =>
       (d.name.toLowerCase().includes(search.toLowerCase()) ||
-        (!Array.isArray(d.provider) && (d.provider as any).name.toLowerCase().includes(search.toLowerCase()))) &&
+        (!Array.isArray(d.provider) && d.provider?.name.toLowerCase().includes(search.toLowerCase()))) &&
       (filterProviders.length === 0 || filterProviders.includes(String(d.provider_id))),
   );
 
@@ -51,7 +51,7 @@ const Page: FC = () => {
         <Table.Tbody>
           {filteredDatasets.map((d) => (
             <Table.Tr key={d.id}>
-              <Table.Td>{(d.provider as any).name}</Table.Td>
+              <Table.Td>{d.provider?.name}</Table.Td>
               <Table.Td>
                 <Link to={`/datasets/${d.id}`}>
                   <Anchor>{d.name}</Anchor>

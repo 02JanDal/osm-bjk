@@ -1,0 +1,17 @@
+.slanted {
+    width: 85px;
+    max-width: 85px;
+    min-width: 85px;
+}
+.slanted > div {
+    height: 110px;
+    position: relative;
+}
+.slanted > div > span {
+    bottom: 5px;
+    right: 40%;
+    position: absolute;
+    transform: rotate(45deg);
+    transform-origin: center right;
+    white-space: nowrap;
+}

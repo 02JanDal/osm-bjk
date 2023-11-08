@@ -90,7 +90,7 @@ const Page: FC = () => {
       Object.fromEntries(
         _.uniq(deviationTitlesData?.data?.map((d) => d.title) || []).map((title, idx, list) => [
           title,
-          `hsl(${(idx * 360) / list.length}deg 100% 50%)`,
+          [`hsl(${(idx * 360) / list.length}deg 80% 50%)`, `hsl(${(idx * 360) / list.length}deg 80% 40%)`],
         ]),
       ),
     [deviationTitlesData?.data],
@@ -257,8 +257,8 @@ const Page: FC = () => {
                 render={useCallback(
                   (f: Feature) => (
                     <RStyle.RCircle radius={5}>
-                      <RStyle.RFill color={colors[f.get("title")].replace(")", " / 50%)")} />
-                      <RStyle.RStroke width={2} color={colors[f.get("title")]} />
+                      <RStyle.RStroke width={2} color={colors[f.get("title")][0]} />
+                      <RStyle.RFill color={colors[f.get("title")][1]} />
                     </RStyle.RCircle>
                   ),
                   [colors],
@@ -271,7 +271,7 @@ const Page: FC = () => {
             className={classes.olPopup}
             style={{ display: selectedFeatures.length > 0 ? undefined : "none" }}
           >
-            <a href="#" id="popup-closer" className={classes.olPopupCloser}></a>
+            <a href="#" className={classes.olPopupCloser} onClick={() => setSelectedFeatures([])}></a>
             <div>
               {selectedFeatures.length > 1 ? (
                 <ul>

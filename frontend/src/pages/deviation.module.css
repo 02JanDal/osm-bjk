@@ -1,0 +1,7 @@
+.popup {
+    background-color: var(--ol-background-color);
+    border: 1px solid var(--ol-subtle-background-color);
+    border-radius: 4px;
+    max-width: 300px;
+    padding: 4px;
+}

@@ -4,13 +4,13 @@ import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tansta
 import { Anchor, Button, Grid, Loader, Table, Tooltip } from "@mantine/core";
 import { Link } from "wouter";
 import { actualElementId, actualElementType, getElement } from "../lib/osm.ts";
-import _ from "lodash";
-import { RFeature, RLayerVector, RMap, ROSM, RStyle } from "rlayers";
+import { RFeature, RLayerVector, RMap, ROSM, RPopup, RStyle } from "rlayers";
 import { GeoJSON } from "ol/format";
 import { getCenter } from "ol/extent";
 import TimeAgo from "../components/TimeAgo.tsx";
 import makeLink from "../lib/id.ts";
 import Disclaimer from "../components/Disclaimer.tsx";
+import classes from "./deviation.module.css";
 
 const TagKeyLink: FC<{ keyString: string }> = (props) => (
   <Anchor href={`https://wiki.openstreetmap.org/wiki/Key:${props.keyString}`} target="_blank">
@@ -78,6 +78,9 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
     : undefined;
   const suggestedGeom = deviation.suggested_geom
     ? geojson.readGeometry(deviation.suggested_geom).transform("EPSG:3006", "EPSG:3857")
+    : undefined;
+  const upstreamGeom = deviation.upstream_item
+    ? geojson.readGeometry(deviation.upstream_item.geometry).transform("EPSG:3006", "EPSG:3857")
     : undefined;
 
   return (
@@ -303,7 +306,11 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
                     <RStyle.RStroke color="blue" width={1} />
                   )}
                 </RStyle.RStyle>
-                <RFeature geometry={osmGeom} />
+                <RFeature geometry={osmGeom}>
+                  <RPopup trigger="hover" className={classes.popup}>
+                    Geometri i OSM
+                  </RPopup>
+                </RFeature>
               </RLayerVector>
             ) : null}
             {suggestedGeom ? (
@@ -318,7 +325,29 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
                     <RStyle.RStroke color="green" width={1} />
                   )}
                 </RStyle.RStyle>
-                <RFeature geometry={suggestedGeom} />
+                <RFeature geometry={suggestedGeom}>
+                  <RPopup trigger="hover" className={classes.popup}>
+                    Föreslagen ny geometri
+                  </RPopup>
+                </RFeature>
+              </RLayerVector>
+            ) : upstreamGeom ? (
+              <RLayerVector zIndex={20}>
+                <RStyle.RStyle>
+                  {upstreamGeom.getType() === "Point" ? (
+                    <RStyle.RCircle radius={8}>
+                      <RStyle.RStroke color="red" width={1} />
+                      <RStyle.RFill color="rgb(128 0 0 / 0.2)" />
+                    </RStyle.RCircle>
+                  ) : (
+                    <RStyle.RStroke color="red" width={1} />
+                  )}
+                </RStyle.RStyle>
+                <RFeature geometry={upstreamGeom}>
+                  <RPopup trigger="hover" className={classes.popup}>
+                    Geometri från datakälla
+                  </RPopup>
+                </RFeature>
               </RLayerVector>
             ) : null}
           </RMap>

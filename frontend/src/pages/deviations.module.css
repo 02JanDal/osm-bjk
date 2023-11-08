@@ -7,18 +7,6 @@
     top: 0.5em;
 }
 
-.deviationPopup {
-    background-color: var(--ol-background-color);
-    border: 1px solid var(--ol-subtle-background-color);
-    border-radius: 4px;
-    max-width: 300px;
-    padding: 4px;
-}
-.deviationPopup h4 {
-    margin-top: 0;
-    margin-bottom: 4px;
-}
-
 .olPopup {
     position: absolute;
     background-color: white;

@@ -11,6 +11,7 @@ import TimeAgo from "../components/TimeAgo.tsx";
 import makeLink from "../lib/id.ts";
 import Disclaimer from "../components/Disclaimer.tsx";
 import classes from "./deviation.module.css";
+import { LineString } from "ol/geom";
 
 const TagKeyLink: FC<{ keyString: string }> = (props) => (
   <Anchor href={`https://wiki.openstreetmap.org/wiki/Key:${props.keyString}`} target="_blank">
@@ -22,6 +23,14 @@ const TagValueLink: FC<{ keyString: string; value: string }> = (props) => (
   <>
     {["amenity", "building", "landuse"].includes(props.keyString) ? (
       <Anchor href={`https://wiki.openstreetmap.org/wiki/Tag:${props.keyString}%3D${props.value}`} target="_blank">
+        {props.value}
+      </Anchor>
+    ) : props.keyString.endsWith("wikidata") ? (
+      <Anchor href={`https://www.wikidata.org/wiki/${props.value}`} target="_blank">
+        {props.value}
+      </Anchor>
+    ) : ["url", "website", "contact:website"].includes(props.keyString) ? (
+      <Anchor href={props.value} target="_blank">
         {props.value}
       </Anchor>
     ) : (
@@ -41,7 +50,7 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
       await postgrest
         .from("deviation")
         .select(
-          "*,osm_geom,upstream_item,dataset(id,name,provider(name),url,license,fetched_at),layer(id,name,description)",
+          "*,osm_geom,upstream_item,dataset(id,name,provider(name),url,license,fetched_at),layer(id,name,description),nearby(id,title,center)",
         )
         .eq("id", id)
         .single()
@@ -185,6 +194,13 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
           </p>
         ) : null}
 
+        {deviation.note.trim().length > 0 ? (
+          <>
+            <h3>Information till åtgärd</h3>
+            <p>{deviation.note.trim()}</p>
+          </>
+        ) : null}
+
         {deviation.suggested_tags ? (
           <>
             <h3>Föreslagna taggar</h3>
@@ -274,6 +290,40 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
             ) : null}
           </Table.Tbody>
         </Table>
+
+        {deviation.nearby.length > 0 ? (
+          <>
+            <h3>
+              Andra närliggande avvikelser (<span style={{ color: "magenta" }}>&#x2715;</span>)
+            </h3>
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Avvikelse</Table.Th>
+                  <Table.Th>Avstånd</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {deviation.nearby.map((d) => (
+                  <Table.Tr key={d.id}>
+                    <Table.Td>
+                      <Link to={`/deviations/${d.id}`}>{d.title}</Link>
+                    </Table.Td>
+                    <Table.Td>
+                      {new LineString([
+                        geojson.readGeometry(deviation.center).getExtent().slice(0, 2),
+                        geojson.readGeometry(d.center).getExtent().slice(0, 2),
+                      ])
+                        .getLength()
+                        .toFixed(0)}{" "}
+                      m
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </>
+        ) : null}
       </Grid.Col>
       <Grid.Col span={{ base: 12, sm: 6, md: 7, xl: 9 }}>
         <div
@@ -350,6 +400,24 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
                 </RFeature>
               </RLayerVector>
             ) : null}
+            <RLayerVector zIndex={10}>
+              <RStyle.RStyle>
+                <RStyle.RText text="&#x2715;">
+                  <RStyle.RFill color="magenta" />
+                </RStyle.RText>
+              </RStyle.RStyle>
+              {deviation.nearby.map((d) => (
+                <RFeature
+                  key={d.id}
+                  properties={d}
+                  geometry={geojson.readGeometry(d.center).transform("EPSG:3006", "EPSG:3857")}
+                >
+                  <RPopup trigger="hover" className={classes.popup}>
+                    {d.title}
+                  </RPopup>
+                </RFeature>
+              ))}
+            </RLayerVector>
           </RMap>
         </div>
       </Grid.Col>

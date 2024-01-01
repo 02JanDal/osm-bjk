@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS api.deviation (
     municipality_code CHAR(4) NOT NULL REFERENCES api.municipality(code),
     action api.action_type,
     action_at TIMESTAMPTZ,
+    note TEXT DEFAULT '' NOT NULL,
     CONSTRAINT uniq UNIQUE NULLS NOT DISTINCT (layer_id, dataset_id, upstream_item_id, osm_element_id, osm_element_type, title),
     CONSTRAINT deviation_upstream_item_id_fkey FOREIGN KEY (dataset_id, upstream_item_id) REFERENCES upstream.item(dataset_id, id) ON DELETE CASCADE
 );
@@ -34,6 +35,18 @@ CREATE OR REPLACE FUNCTION api.upstream_item(api.deviation) RETURNS upstream.ite
     AS $_$
   SELECT * FROM upstream.item WHERE id = $1.upstream_item_id;
 $_$;
+
+CREATE OR REPLACE FUNCTION api.nearby(
+	api.deviation)
+    RETURNS SETOF api.deviation
+    LANGUAGE 'sql'
+    COST 100
+    STABLE SECURITY DEFINER PARALLEL SAFE
+    ROWS 1000
+
+AS $BODY$
+  SELECT * FROM api.deviation WHERE ST_DWithin(deviation.center, $1.center, 250) AND deviation.id <> $1.id ORDER BY ST_Distance(deviation.center, $1.center) LIMIT 10;
+$BODY$;
 
 -- endregion
 
@@ -117,5 +130,9 @@ GRANT ALL ON FUNCTION api.osm_geom(api.deviation) TO web_auth;
 REVOKE ALL ON FUNCTION api.upstream_item(api.deviation) FROM PUBLIC;
 GRANT ALL ON FUNCTION api.upstream_item(api.deviation) TO web_anon;
 GRANT ALL ON FUNCTION api.upstream_item(api.deviation) TO web_auth;
+
+REVOKE ALL ON FUNCTION api.nearby(api.deviation) FROM PUBLIC;
+GRANT ALL ON FUNCTION api.nearby(api.deviation) TO web_anon;
+GRANT ALL ON FUNCTION api.nearby(api.deviation) TO web_auth;
 
 -- endregion

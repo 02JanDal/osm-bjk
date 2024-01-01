@@ -63,6 +63,7 @@ export type DeviationRow = {
   municipality_code: string;
   action?: "fixed" | "already-fixed" | "not-an-issue" | "deferred";
   action_at?: string;
+  note: string;
 
   osm_geom?: object;
   upstream_item?: {
@@ -75,6 +76,7 @@ export type DeviationRow = {
     original_attributes: Record<string, any>;
     updated_at?: string;
   };
+  nearby?: DeviationRow[];
 };
 
 interface ApiSchema {

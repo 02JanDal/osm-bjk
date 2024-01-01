@@ -152,6 +152,7 @@ class ReplicationHandler(SimpleHandler):
             missing_nodes = [n.ref for n in w.nodes if n.ref not in existing_nodes]
             deleted_nodes = []
             if missing_nodes:
+                print(f"Fetching {len(missing_nodes)} missing nodes: {missing_nodes}")
                 try:
                     lists = [missing_nodes[i : i + 10] for i in range(0, len(missing_nodes), 10)]
                     fetched_lists = [self._osm.NodesGet(lst) for lst in lists]

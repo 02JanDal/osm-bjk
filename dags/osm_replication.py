@@ -266,12 +266,12 @@ with DAG(
             url = next(m[1] for m in meta if m[0] == "url")
             sequence = int(next(m[1] for m in meta if m[0] == "sequence"))
             print("Starting replication from", url)
-            print("Will start att sequence", sequence)
+            print("Will start att sequence", sequence + 1)
 
             with ReplicationServer(url) as rep:
                 handler = ReplicationHandler(cur)
                 while True:
-                    res = rep.collect_diffs(sequence)
+                    res = rep.collect_diffs(sequence + 1)
                     if res is None:
                         return None
 

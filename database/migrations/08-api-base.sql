@@ -48,13 +48,18 @@ CREATE TABLE IF NOT EXISTS api.municipality_layer (
     id BIGINT NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     municipality_code CHAR(4) NOT NULL REFERENCES api.municipality(code) ON DELETE RESTRICT,
     layer_id BIGINT NOT NULL REFERENCES api.layer(id) ON DELETE CASCADE,
-    dataset_id BIGINT REFERENCES upstream.dataset(id),
-    dataset_type api.dataset_usage,
-    project_link TEXT,
     last_checked TIMESTAMPTZ,
-    last_checked_by BIGINT,
-    CONSTRAINT municipality_layer_check CHECK ((((dataset_id IS NULL) AND (dataset_type IS NULL)) OR ((dataset_id IS NOT NULL) AND (dataset_type IS NOT NULL)))),
-    CONSTRAINT municipality_layer_municipality_code_layer_id_key UNIQUE (municipality_code, layer_id)
+    last_checked_by BIGINT
+);
+CREATE TABLE IF NOT EXISTS api.municipality_dataset
+(
+    id BIGINT NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    municipality_code CHAR(4) NOT NULL REFERENCES api.municipality(code) ON DELETE RESTRICT,
+    layer_id BIGINT REFERENCES api.layer(id) ON DELETE CASCADE,
+    dataset_id BIGINT NOT NULL REFERENCES upstream.dataset(id),
+    dataset_type dataset_usage NOT NULL,
+    project_link text,
+	UNIQUE (municipality_code, dataset_id)
 );
 
 GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE api.upstream_item TO app;
@@ -67,6 +72,9 @@ GRANT SELECT ON TABLE api.layer TO web_auth;
 
 GRANT SELECT ON TABLE api.municipality_layer TO web_anon;
 GRANT SELECT ON TABLE api.municipality_layer TO web_auth;
+
+GRANT SELECT ON TABLE api.municipality_dataset TO web_anon;
+GRANT SELECT ON TABLE api.municipality_dataset TO web_auth;
 
 GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE upstream.provider TO app;
 

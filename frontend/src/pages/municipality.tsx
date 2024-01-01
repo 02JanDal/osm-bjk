@@ -25,7 +25,7 @@ const Page: FC<{ params: { code: string } }> = ({ params }) => {
           await postgrest
             .from("municipality")
             .select(
-              "*,region_name,municipality_layer(datasetType:dataset_type,projectLink:project_link,lastChecked:last_checked,lastCheckedBy:last_checked_by,layer(id),dataset(id,name,provider(name)))",
+              "*,region_name,municipality_layer(lastChecked:last_checked,lastCheckedBy:last_checked_by,layer(id)),municipality_dataset(datasetType:dataset_type,projectLink:project_link,layer(id),dataset(id,name,provider(name)))",
             )
             .eq("code", params.code)
             .single()
@@ -94,23 +94,24 @@ const Page: FC<{ params: { code: string } }> = ({ params }) => {
           <Table.Tbody>
             {layers.map((layer) => {
               const ml = municipality.municipality_layer.find((ml) => ml.layer!.id === layer.id);
+              const md = municipality.municipality_dataset.filter((md) => md.layer?.id === layer.id);
               const deviationCount = deviations
                 .filter((d) => d.layer_id === layer.id)
                 .reduce((prev, cur) => prev + cur.count, 0);
               const Component = layer.is_major ? Table.Th : Table.Td;
               return (
                 <Table.Tr key={layer.id}>
-                  <Component>
+                  <Component style={{ verticalAlign: "top" }}>
                     <abbr title={layer.description}>{layer.name}</abbr>
                   </Component>
-                  <Table.Td>
+                  <Table.Td style={{ verticalAlign: "top" }}>
                     {ml && ml.lastChecked ? (
                       <>
                         <TimeAgo date={ml.lastChecked} /> av <UserName userId={ml.lastCheckedBy!} />
                       </>
                     ) : null}
                   </Table.Td>
-                  <Table.Td>
+                  <Table.Td style={{ verticalAlign: "top" }}>
                     {deviationCount > 0 ? (
                       <>
                         {deviationCount}{" "}
@@ -123,17 +124,33 @@ const Page: FC<{ params: { code: string } }> = ({ params }) => {
                     ) : null}
                   </Table.Td>
                   <Table.Td>
-                    {ml && ml.dataset ? (
-                      <Anchor component={Link} to={`/datasets/${ml.dataset.id}`}>
-                        {ml.dataset.name} ({ml.dataset.provider!.name})
-                      </Anchor>
-                    ) : null}
+                    {md.map((d) =>
+                      d.dataset ? (
+                        <p key={d.dataset.id} style={{ marginTop: 0, marginBottom: 0 }}>
+                          <Anchor component={Link} to={`/datasets/${d.dataset.id}`}>
+                            {d.dataset.name} ({d.dataset.provider!.name})
+                          </Anchor>
+                        </p>
+                      ) : null,
+                    )}
                   </Table.Td>
                 </Table.Tr>
               );
             })}
           </Table.Tbody>
         </Table>
+        <h3>Övriga datakällor tillgängliga i kommunen</h3>
+        <ul>
+          {_.sortBy(municipality.municipality_dataset, "dataset.name")
+            .filter((d) => !d.layer)
+            .map((d) => (
+              <li key={d.dataset!.id}>
+                <Anchor component={Link} to={`/datasets/${d.dataset!.id}`}>
+                  {d.dataset!.name} ({d.dataset!.provider!.name})
+                </Anchor>
+              </li>
+            ))}
+        </ul>
       </Grid.Col>
     </Grid>
   );

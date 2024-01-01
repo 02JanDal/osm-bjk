@@ -12,11 +12,18 @@ export type MunicipalityLayerRow = {
   id: number;
   municipality_code: string;
   layer_id: number;
-  dataset_id: number | null;
-  dataset_type: "advisory" | "complete" | "automatic" | null;
-  project_link: string | null;
   last_checked: string | null;
   last_checked_by: number | null;
+};
+
+export type DatasetUsage = "advisory" | "complete" | "automatic";
+export type MunicipalityDatasetRow = {
+  id: number;
+  municipality_code: string;
+  layer_id: number;
+  dataset_id: number | null;
+  dataset_type: DatasetUsage | null;
+  project_link: string | null;
 };
 
 export type LayerRow = {
@@ -79,6 +86,25 @@ interface ApiSchema {
     };
     municipality_layer: {
       Row: MunicipalityLayerRow;
+      Insert: Record<string, never>;
+      Update: Record<string, never>;
+      Relationships: [
+        {
+          foreignKeyName: "municipality_layer_layer_id_fkey";
+          columns: ["layer_id"];
+          referencedRelation: "layer";
+          referencedColumns: ["id"];
+        },
+        {
+          foreignKeyName: "municipality_layer_municipality_code_fkey";
+          columns: ["municipality_code"];
+          referencedRelation: "municipality";
+          referencedColumns: ["code"];
+        },
+      ];
+    };
+    municipality_dataset: {
+      Row: MunicipalityDatasetRow;
       Insert: Record<string, never>;
       Update: Record<string, never>;
       Relationships: [

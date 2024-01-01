@@ -1,6 +1,6 @@
 import { FC } from "react";
 import { useSuspenseQueries } from "@tanstack/react-query";
-import postgrest, { DatasetRow, LayerRow, MunicipalityRow, ProviderRow } from "../postgrest.ts";
+import postgrest, { DatasetRow, DatasetUsage, LayerRow, MunicipalityRow, ProviderRow } from "../postgrest.ts";
 import { ActionIcon, Badge, Table, Tooltip } from "@mantine/core";
 import { differenceInMonths } from "date-fns";
 
@@ -17,18 +17,32 @@ import {
 import { Link } from "wouter";
 import { colorForDeviationCount } from "../lib/colors.ts";
 
+function bestDatasetType(datasets: { datasetType?: DatasetUsage | null }[]): DatasetUsage | undefined {
+  if (datasets.some((d) => d.datasetType === "automatic")) {
+    return "automatic";
+  } else if (datasets.some((d) => d.datasetType === "complete")) {
+    return "complete";
+  } else if (datasets.some((d) => d.datasetType === "advisory")) {
+    return "advisory";
+  } else {
+    return undefined;
+  }
+}
+
 const MunicipalityLayer: FC<{
   layer: LayerRow;
-  dataset?:
-    | (Omit<DatasetRow, "provider_id" | "url" | "license" | "fetched_at"> & {
-        provider: Pick<ProviderRow, "name"> | null;
-      })
-    | null;
-  datasetType?: "advisory" | "complete" | "automatic" | null;
+  datasets: {
+    dataset:
+      | (Omit<DatasetRow, "provider_id" | "url" | "license" | "fetched_at"> & {
+          provider: Pick<ProviderRow, "name"> | null;
+        })
+      | null;
+    datasetType?: DatasetUsage | null;
+  }[];
   lastChecked?: string | null;
   municipality: Pick<MunicipalityRow, "name" | "code">;
   deviations: number;
-}> = ({ lastChecked, datasetType, dataset, municipality, layer, deviations }) => {
+}> = ({ lastChecked, datasets, municipality, layer, deviations }) => {
   const monthsSinceCheck = lastChecked ? differenceInMonths(new Date(), new Date(lastChecked)) : undefined;
 
   return (
@@ -55,13 +69,13 @@ const MunicipalityLayer: FC<{
             )}
           </ActionIcon>
         </Tooltip>
-        {datasetType === undefined || !dataset ? null : (
-          <Tooltip label={`${dataset.name} från ${dataset.provider!.name}`}>
-            <Link to={`/datasets/${dataset.id}?municipality=${municipality.code}`}>
+        {datasets.length === 0 ? null : datasets.length === 1 ? (
+          <Tooltip label={`${datasets[0].dataset!.name} från ${datasets[0].dataset!.provider!.name}`}>
+            <Link to={`/datasets/${datasets[0].dataset!.id}?municipality=${municipality.code}`}>
               <ActionIcon variant="transparent" color="black">
-                {datasetType === "advisory" ? (
+                {datasets[0].datasetType === "advisory" ? (
                   <IconDatabase style={{ width: "70%", height: "70%", color: "lime" }} />
-                ) : datasetType === "complete" ? (
+                ) : datasets[0].datasetType === "complete" ? (
                   <IconDatabaseStar style={{ width: "70%", height: "70%", color: "darkgreen" }} />
                 ) : (
                   <IconDatabaseCog style={{ width: "70%", height: "70%", color: "blue" }} />
@@ -69,6 +83,16 @@ const MunicipalityLayer: FC<{
               </ActionIcon>
             </Link>
           </Tooltip>
+        ) : (
+          <ActionIcon variant="transparent" color="black">
+            {bestDatasetType(datasets) === "advisory" ? (
+              <IconDatabase style={{ width: "70%", height: "70%", color: "lime" }} />
+            ) : bestDatasetType(datasets) === "complete" ? (
+              <IconDatabaseStar style={{ width: "70%", height: "70%", color: "darkgreen" }} />
+            ) : (
+              <IconDatabaseCog style={{ width: "70%", height: "70%", color: "blue" }} />
+            )}
+          </ActionIcon>
         )}
         {deviations > 0 ? (
           <Link to={`/deviations?municipality=${municipality.code}&layer=${layer.id}`}>
@@ -104,7 +128,7 @@ const Page: FC = () => {
           await postgrest
             .from("municipality")
             .select(
-              "code,name,region_name,deviation_title(layer_id,count),municipality_layer(datasetType:dataset_type,projectLink:project_link,lastChecked:last_checked,layer_id,dataset(id,name,provider(name)))",
+              "code,name,region_name,deviation_title(layer_id,count),municipality_dataset(datasetType:dataset_type,projectLink:project_link,layer_id,dataset(id,name,provider(name))),municipality_layer(lastChecked:last_checked,layer_id)",
             )
             .order("code")
             .throwOnError(),
@@ -167,6 +191,7 @@ const Page: FC = () => {
                 <Table.Td key={l.id} style={{ borderLeft: "1px dashed var(--_table-border-color)" }}>
                   <MunicipalityLayer
                     {...m.municipality_layer.find((ml) => ml.layer_id === l.id)}
+                    datasets={m.municipality_dataset.filter((ml) => ml.layer_id === l.id)}
                     municipality={m}
                     layer={l}
                     deviations={

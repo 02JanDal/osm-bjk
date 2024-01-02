@@ -63,11 +63,12 @@ CREATE OR REPLACE VIEW upstream.v_deviation_schools_skolverket AS
     5 AS layer_id,
     q.upstream_item_id,
     q.suggested_geom,
+    q.suggested_tags,
     q.osm_element_id,
     q.osm_element_type,
-    q.suggested_tags,
     q.title,
-    q.description
+    q.description,
+    '' AS note
    FROM ( SELECT matched.id AS upstream_item_id,
                 CASE
                     WHEN matched.osm_id IS NULL THEN matched.geometry

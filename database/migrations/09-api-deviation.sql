@@ -20,6 +20,20 @@ CREATE TABLE IF NOT EXISTS api.deviation (
     CONSTRAINT deviation_upstream_item_id_fkey FOREIGN KEY (dataset_id, upstream_item_id) REFERENCES upstream.item(dataset_id, id) ON DELETE CASCADE
 );
 
+CREATE TYPE upstream.calculated_deviation AS
+(
+	dataset_id integer,
+	layer_id integer,
+	upstream_item_id bigint,
+	suggested_geom geometry,
+	suggested_tags jsonb,
+	osm_element_id bigint,
+	osm_element_type osm.element_type,
+	title text,
+	description text,
+	note text
+);
+
 -- endregion
 
 -- region Extra PostgREST functions

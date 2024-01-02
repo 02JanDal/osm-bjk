@@ -2,21 +2,22 @@ CREATE OR REPLACE VIEW upstream.v_deviation_preschools_scb AS
  SELECT 110 AS dataset_id,
     15 AS layer_id,
     i.id AS upstream_item_id,
-        CASE
-            WHEN (p.id IS NULL) THEN i.geometry
-            ELSE NULL::GEOMETRY
-        END AS suggested_geom,
+    CASE
+        WHEN (p.id IS NULL) THEN i.geometry
+        ELSE NULL::GEOMETRY
+    END AS suggested_geom,
+    public.tag_diff(COALESCE(p.tags, '{}'::jsonb), jsonb_build_object('amenity', 'kindergarten', 'name', public.fix_name((i.original_attributes->>'Firmabenämning')), 'operator', public.fix_name((i.original_attributes->>'Företagsnamn')))) AS suggested_tags,
     p.id AS osm_element_id,
     p.type AS osm_element_type,
-    public.tag_diff(COALESCE(p.tags, '{}'::jsonb), jsonb_build_object('amenity', 'kindergarten', 'name', public.fix_name((i.original_attributes->>'Firmabenämning')), 'operator', public.fix_name((i.original_attributes->>'Företagsnamn')))) AS suggested_tags,
-        CASE
-            WHEN (p.id IS NULL) THEN 'Förskola saknas'
-            ELSE 'Förskola saknar tagg'
-        END AS title,
-        CASE
-            WHEN (p.id IS NULL) THEN 'Enligt SCBs register över förskolor ska det finnas en förskola här'
-            ELSE 'Förskola i OSM saknar vissa taggar vars värde kan fås ur SCBs register över förskolor'
-        END AS description
+    CASE
+        WHEN (p.id IS NULL) THEN 'Förskola saknas'
+        ELSE 'Förskola saknar tagg'
+    END AS title,
+    CASE
+        WHEN (p.id IS NULL) THEN 'Enligt SCBs register över förskolor ska det finnas en förskola här'
+        ELSE 'Förskola i OSM saknar vissa taggar vars värde kan fås ur SCBs register över förskolor'
+    END AS description,
+    '' AS note
    FROM (( SELECT id,
             dataset_id,
             url,
@@ -38,11 +39,12 @@ UNION ALL
     15 AS layer_id,
     NULL::BIGINT AS upstream_item_id,
     NULL::GEOMETRY AS suggested_geom,
+    NULL::JSONB AS suggested_tags,
     element.id AS osm_element_id,
     element.type AS osm_element_type,
-    NULL::JSONB AS suggested_tags,
     'Möjligen stängd förskola' AS title,
-    'Enligt SCBs register över förskolor finns det ingen förskola här' AS description
+    'Enligt SCBs register över förskolor finns det ingen förskola här' AS description,
+    '' AS note
    FROM osm.element
   WHERE (((element.tags->>'amenity') = ANY (ARRAY['kindergarten', 'childcare'])) AND (NOT (EXISTS ( SELECT 1
            FROM upstream.item

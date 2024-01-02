@@ -43,7 +43,7 @@ CREATE OR REPLACE VIEW upstream.v_deviations AS
 
 GRANT SELECT ON TABLE upstream.v_deviations TO app;
 
-CREATE OR REPLACE FUNCTION upstream._dynamic_deviations_by_view_name(view_name text) RETURNS SETOF upstream.v_deviations
+CREATE OR REPLACE FUNCTION upstream._dynamic_deviations_by_view_name(view_name text) RETURNS SETOF upstream.calculated_deviation
     LANGUAGE plpgsql
     AS $$
 BEGIN

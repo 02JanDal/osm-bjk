@@ -36,21 +36,22 @@ CREATE OR REPLACE VIEW upstream.v_deviation_trees_gavle AS
  SELECT 5 AS dataset_id,
     16 AS layer_id,
     gavle_trees.id AS upstream_item_id,
-        CASE
-            WHEN (osm_trees.id IS NULL) THEN gavle_trees.geometry
-            ELSE NULL::GEOMETRY
-        END AS suggested_geom,
+    CASE
+        WHEN (osm_trees.id IS NULL) THEN gavle_trees.geometry
+        ELSE NULL::GEOMETRY
+    END AS suggested_geom,
+    public.tag_diff(osm_trees.tags, gavle_trees.tags) AS suggested_tags,
     osm_trees.id AS osm_element_id,
     osm_trees.type AS osm_element_type,
-    public.tag_diff(osm_trees.tags, gavle_trees.tags) AS suggested_tags,
-        CASE
-            WHEN osm_trees.id IS NULL THEN 'Träd saknas'
-            ELSE 'Träd saknar taggar'
-        END AS title,
-        CASE
-            WHEN osm_trees.id IS NULL THEN 'Enligt Gävle kommuns lista över trädskötsel ska det finnas ett träd här'
-            ELSE 'Följande taggar, härledda ur Gävle kommuns lista över trädskötsel, saknas'
-        END AS description
+    CASE
+        WHEN osm_trees.id IS NULL THEN 'Träd saknas'
+        ELSE 'Träd saknar taggar'
+    END AS title,
+    CASE
+        WHEN osm_trees.id IS NULL THEN 'Enligt Gävle kommuns lista över trädskötsel ska det finnas ett träd här'
+        ELSE 'Följande taggar, härledda ur Gävle kommuns lista över trädskötsel, saknas'
+    END AS description,
+    '' AS note
    FROM gavle_trees
      LEFT JOIN osm_trees ON ST_DWithin(gavle_trees.geometry, osm_trees.geom, 5)
   WHERE osm_trees.tags IS NULL OR NOT (osm_trees.tags @> gavle_trees.tags);

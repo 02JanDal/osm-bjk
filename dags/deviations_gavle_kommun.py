@@ -3,7 +3,12 @@ from datetime import timedelta, datetime
 from airflow import DAG, Dataset
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
-for dataset_id, view_name, dataset_name in [(5, "trees_gavle", "tradskotsel")]:
+for dataset_id, view_name, dataset_name in [
+    (4, "badplatser_gavle", "badplatser"),
+    (5, "trees_gavle", "tradskotsel"),
+    (8, "lifesaving_gavle", "livraddningsutrustning"),
+    (17, "atervinning_gavle", "atervinning"),
+]:
     with DAG(
         f"deviations-{view_name}",
         description=f"Updates deviations based on v_deviations_{view_name}",

@@ -1,6 +1,6 @@
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrayParam, useQueryParams } from "use-query-params";
-import { Button, Grid, MultiSelect, Stack, Tooltip } from "@mantine/core";
+import { Button, Grid, MultiSelect, Stack } from "@mantine/core";
 import { useQuery, useSuspenseQueries } from "@tanstack/react-query";
 import postgrest, { MunicipalityRow } from "../postgrest";
 import _ from "lodash";
@@ -11,6 +11,7 @@ import { boundingExtent, getCenter } from "ol/extent";
 import classes from "./deviations.module.css";
 import { Link, useLocation } from "wouter";
 import { Feature, Overlay } from "ol";
+import { importUrl } from "../lib/josm.ts";
 
 const geojson = new GeoJSON();
 
@@ -114,6 +115,23 @@ const Page: FC = () => {
   const popupElementRef = useRef<HTMLDivElement>(null);
   const [selectedFeatures, setSelectedFeatures] = useState<Feature[]>([]);
 
+  const osmChangeUrl = useMemo(() => {
+    const search = new URLSearchParams();
+    if (query.municipality?.length) {
+      search.set("municipalities", `{${query.municipality.join(",")}}`);
+    }
+    if (query.dataset?.length) {
+      search.set("dataset_ids", `{${query.dataset.join(",")}}`);
+    }
+    if (query.layer?.length) {
+      search.set("layer_ids", `{${query.layer.join(",")}}`);
+    }
+    if (query.deviation?.length) {
+      search.set("titles", `{${query.deviation.join(",")}}`);
+    }
+    return `https://osm.jandal.se/api/rpc/osmchange?${search.toString()}`;
+  }, [query]);
+
   return (
     <Grid grow w="100%" styles={{ inner: { height: "100%" } }}>
       <Grid.Col span={{ base: 0, sm: 4, md: 3, lg: 3, xl: 2 }}>
@@ -174,16 +192,21 @@ const Page: FC = () => {
             style={{ margin: 0, border: "none", borderBottom: "1px solid var(--mantine-color-gray-4)", width: "100%" }}
           />
           <Button.Group orientation="vertical">
-            <Tooltip label="Under arbete" withArrow position="right">
-              <Button variant="light" data-disabled onClick={(event) => event.preventDefault()}>
-                Hämta osmChange
-              </Button>
-            </Tooltip>
-            <Tooltip label="Under arbete" withArrow position="right">
-              <Button variant="light" data-disabled onClick={(event) => event.preventDefault()}>
-                Hämta JOSM-fil
-              </Button>
-            </Tooltip>
+            <Button variant="light" component="a" href={osmChangeUrl}>
+              Hämta osmChange
+            </Button>
+            <Button
+              variant="light"
+              onClick={() => {
+                importUrl(osmChangeUrl, {
+                  changesetTags: {
+                    hashtags: "#bastajavlakartan",
+                  },
+                });
+              }}
+            >
+              Öppna alla i JOSM
+            </Button>
           </Button.Group>
           <p style={{ marginTop: "auto", marginBottom: "calc(-1 * var(--grid-gutter)/2)" }}>
             Hittade {countResults} avvikelser

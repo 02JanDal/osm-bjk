@@ -7,6 +7,12 @@ interface JOSMLoadAndZoomParameters {
   changesetHashtags?: string[];
   changesetTags?: Record<string, string>;
 }
+interface JOSMImportParameters {
+  newLayer?: boolean;
+  layerName?: string;
+  layerLocked?: boolean;
+  changesetTags?: Record<string, string>;
+}
 
 export function loadAndZoom(
   left: number,
@@ -66,6 +72,28 @@ export function addNode(lat: number, lon: number, tags: Record<string, string>, 
       .join("|"),
   );
   sendRemoteCommand(`http://127.0.0.1:8111/add_node?${search.toString()}`, callback);
+}
+
+export function importUrl(url: string, params?: JOSMImportParameters, callback?: () => void) {
+  const search = new URLSearchParams();
+  if (params?.newLayer !== undefined) {
+    search.set("new_layer", params.newLayer ? "true" : "false");
+  }
+  if (params?.layerName) {
+    search.set("layer_name", params.layerName);
+  }
+  if (params?.layerLocked !== undefined) {
+    search.set("layer_locked", params.layerLocked ? "true" : "false");
+  }
+  if (params?.changesetTags) {
+    search.set(
+      "changeset_tags",
+      Object.entries(params.changesetTags)
+        .map(([k, v]) => `${k}=${v ?? ""}`)
+        .join("|"),
+    );
+  }
+  sendRemoteCommand(`http://127.0.0.1:8111/import?${search.toString()}&url=${encodeURIComponent(url)}`, callback);
 }
 
 function sendRemoteCommand(url: string, callback?: () => void) {

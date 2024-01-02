@@ -1,9 +1,29 @@
 DO $$ BEGIN
-    CREATE TYPE osm.element_type AS ENUM ('n', 'w', 'a');
+    CREATE TYPE osm.element_type AS ENUM ('n', 'w', 'a', 'r');
 EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
 DO $$ BEGIN
     CREATE TYPE osm.object_type AS ENUM ('node', 'way', 'relation');
 EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
+
+CREATE FUNCTION osm.real_element_type(type osm.element_type, id bigint)
+    RETURNS osm.object_type
+    LANGUAGE 'sql'
+    IMMUTABLE STRICT PARALLEL SAFE
+AS $BODY$
+    SELECT CASE WHEN "type" = 'n' THEN 'node'::osm.object_type
+        WHEN "type" = 'w' OR ("type" = 'a' AND "id" < 3600000000) THEN 'way'::osm.object_type
+        WHEN "type" = 'r' OR ("type" = 'a' AND "id" > 3600000000) THEN 'relation'::osm.object_type END
+$BODY$;
+GRANT EXECUTE ON FUNCTION osm.real_element_type(osm.element_type, bigint) TO PUBLIC;
+CREATE OR REPLACE FUNCTION osm.real_element_id(type osm.element_type, id bigint)
+    RETURNS bigint
+    LANGUAGE 'sql'
+    IMMUTABLE STRICT PARALLEL SAFE
+AS $BODY$
+    SELECT CASE WHEN ("type" = 'a' AND "id" > 3600000000) THEN "id" - 3600000000 ELSE "id" END
+$BODY$;
+
+GRANT EXECUTE ON FUNCTION osm.real_element_id(osm.element_type, bigint) TO PUBLIC;
 
 CREATE TABLE IF NOT EXISTS osm.meta (
     key TEXT NOT NULL PRIMARY KEY,

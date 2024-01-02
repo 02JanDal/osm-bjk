@@ -1,3 +1,5 @@
+create domain "text/xml" as pg_catalog.xml;
+
 CREATE OR REPLACE FUNCTION public.fix_name(original text) RETURNS text
     LANGUAGE sql IMMUTABLE STRICT LEAKPROOF PARALLEL SAFE
     AS $$

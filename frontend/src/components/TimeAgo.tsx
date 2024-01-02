@@ -5,5 +5,7 @@ import { FC } from "react";
 
 const formatter = buildFormatter(strings);
 
-const TimeAgo: FC<ReactTimeago.ReactTimeagoProps> = (props) => <ReactTimeago {...props} formatter={formatter} />;
+const TimeAgo: FC<Omit<ReactTimeago.ReactTimeagoProps<never>, "component">> = (props) => (
+  <ReactTimeago {...props} formatter={formatter} />
+);
 export default TimeAgo;

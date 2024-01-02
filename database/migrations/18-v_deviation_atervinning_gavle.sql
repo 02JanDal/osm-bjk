@@ -49,7 +49,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_atervinning_gavle
         )
  SELECT 17 AS dataset_id,
     13 AS layer_id,
-    gavle_objs_centre.id AS upstream_item_id,
+    ARRAY[gavle_objs_centre.id] AS upstream_item_ids,
         CASE
             WHEN osm_objs_centre.id IS NULL THEN gavle_objs_centre.geometry
             ELSE NULL::geometry
@@ -58,12 +58,12 @@ CREATE OR REPLACE VIEW upstream.v_deviation_atervinning_gavle
     osm_objs_centre.type AS osm_element_type,
     tag_diff(osm_objs_centre.tags, gavle_objs_centre.tags) AS suggested_tags,
         CASE
-            WHEN osm_objs_centre.id IS NULL THEN 'Återvinningsstation saknas'::text
-            ELSE 'Återvinningsstation saknar taggar'::text
+            WHEN osm_objs_centre.id IS NULL THEN 'Återvinningscentral saknas'::text
+            ELSE 'Återvinningscentral saknar taggar'::text
         END AS title,
         CASE
-            WHEN osm_objs_centre.id IS NULL THEN 'Enligt Gävle kommun ska det finnas en återvinningsstation här'::text
-            ELSE 'Följande taggar, härledda ur från Gävle kommuns data, saknas på återvinningsstationen här'::text
+            WHEN osm_objs_centre.id IS NULL THEN 'Enligt Gävle kommun ska det finnas en återvinningscentral här'::text
+            ELSE 'Följande taggar, härledda ur från Gävle kommuns data, saknas på återvinningscentralen här'::text
         END AS description,
 		'' AS note
    FROM gavle_objs_centre
@@ -72,7 +72,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_atervinning_gavle
   UNION ALL
    SELECT 17 AS dataset_id,
     13 AS layer_id,
-    null AS upstream_item_id,
+    ARRAY[]::BIGINT[] AS upstream_item_ids,
     CASE
         WHEN osm_objs_container.id IS NULL THEN gavle_objs_container.geometry
         ELSE NULL::geometry
@@ -81,12 +81,12 @@ CREATE OR REPLACE VIEW upstream.v_deviation_atervinning_gavle
     osm_objs_container.id AS osm_element_id,
     osm_objs_container.type AS osm_element_type,
     CASE
-        WHEN osm_objs_container.id IS NULL THEN 'Återvinningscentral saknas'::text
-        ELSE 'Återvinningscentral saknar taggar'::text
+        WHEN osm_objs_container.id IS NULL THEN 'Återvinningsstation saknas'::text
+        ELSE 'Återvinningsstation saknar taggar'::text
     END AS title,
     CASE
-        WHEN osm_objs_container.id IS NULL THEN 'Enligt Gävle kommun ska det finnas en återvinningscentral här'::text
-        ELSE 'Följande taggar, härledda ur från Gävle kommuns data, saknas på återvinningscentralen här'::text
+        WHEN osm_objs_container.id IS NULL THEN 'Enligt Gävle kommun ska det finnas en återvinningsstation här'::text
+        ELSE 'Följande taggar, härledda ur från Gävle kommuns data, saknas på återvinningsstationen här'::text
     END AS description,
     gavle_objs_container.note AS note
    FROM gavle_objs_container

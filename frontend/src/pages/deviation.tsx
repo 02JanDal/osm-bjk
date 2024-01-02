@@ -50,7 +50,7 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
       await postgrest
         .from("deviation")
         .select(
-          "*,osm_geom,upstream_item,dataset(id,name,provider(name),url,license,fetched_at),layer(id,name,description),nearby(id,title,center)",
+          "*,osm_geom,upstream_item(*),dataset(id,name,provider(name),url,license,fetched_at),layer(id,name,description),nearby(id,title,center)",
         )
         .eq("id", id)
         .single()
@@ -88,9 +88,9 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
   const suggestedGeom = deviation.suggested_geom
     ? geojson.readGeometry(deviation.suggested_geom).transform("EPSG:3006", "EPSG:3857")
     : undefined;
-  const upstreamGeom = deviation.upstream_item
-    ? geojson.readGeometry(deviation.upstream_item.geometry).transform("EPSG:3006", "EPSG:3857")
-    : undefined;
+  const upstreamGeom = deviation.upstream_item.map((i) =>
+    geojson.readGeometry(i.geometry).transform("EPSG:3006", "EPSG:3857"),
+  );
 
   return (
     <Grid grow w="100%" styles={{ inner: { height: "100%" } }}>
@@ -222,7 +222,20 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
         ) : null}
         {deviation.osm_element_id ? (
           <>
-            <h3>Befintligt element i OSM</h3>
+            <h3>
+              Befintligt element i OSM (
+              <span
+                style={{
+                  border: "1px solid blue",
+                  background: "rgba(0 0 128 / 0.2)",
+                  width: 15,
+                  height: 15,
+                  borderRadius: 7.5,
+                  display: "inline-block",
+                }}
+              />
+              )
+            </h3>
             {!elementData ? (
               <Loader />
             ) : (
@@ -274,18 +287,29 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
                 <TimeAgo date={deviation.dataset!.fetched_at} />
               </Table.Td>
             </Table.Tr>
-            {deviation.upstream_item?.updated_at ? (
+            {deviation.upstream_item.some((i) => i.updated_at) ? (
               <Table.Tr>
-                <Table.Th>Källobjekt uppdaterat:</Table.Th>
-                <Table.Td>
-                  <TimeAgo date={deviation.upstream_item.updated_at} />
-                </Table.Td>
+                <Table.Th rowSpan={deviation.upstream_item.filter((i) => i.updated_at).length}>
+                  Källobjekt{" "}
+                  {deviation.upstream_item.filter((i) => i.updated_at).length > 1 ? "uppdaterade" : "uppdaterat"}:
+                </Table.Th>
+                {deviation.upstream_item
+                  .filter((i) => i.updated_at)
+                  .map((i) => (
+                    <Table.Td key={i.id}>
+                      <TimeAgo date={i.updated_at!} />
+                    </Table.Td>
+                  ))}
               </Table.Tr>
             ) : null}
-            {deviation.upstream_item?.url ? (
+            {deviation.upstream_item.some((i) => i.url) ? (
               <Table.Tr>
-                <Table.Th>Länk:</Table.Th>
-                <Table.Td>{deviation.upstream_item?.url}</Table.Td>
+                <Table.Th rowSpan={deviation.upstream_item.filter((i) => i.url).length}>Länk till källobjekt:</Table.Th>
+                {deviation.upstream_item
+                  .filter((i) => i.url)
+                  .map((i) => (
+                    <Table.Td key={i.id}>{i.url}</Table.Td>
+                  ))}
               </Table.Tr>
             ) : null}
           </Table.Tbody>
@@ -383,21 +407,23 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
               </RLayerVector>
             ) : upstreamGeom ? (
               <RLayerVector zIndex={20}>
-                <RStyle.RStyle>
-                  {upstreamGeom.getType() === "Point" ? (
-                    <RStyle.RCircle radius={8}>
-                      <RStyle.RStroke color="red" width={1} />
-                      <RStyle.RFill color="rgb(128 0 0 / 0.2)" />
-                    </RStyle.RCircle>
-                  ) : (
-                    <RStyle.RStroke color="red" width={1} />
-                  )}
-                </RStyle.RStyle>
-                <RFeature geometry={upstreamGeom}>
-                  <RPopup trigger="hover" className={classes.popup}>
-                    Geometri från datakälla
-                  </RPopup>
-                </RFeature>
+                {upstreamGeom.map((geom, index) => (
+                  <RFeature key={index} geometry={geom}>
+                    <RPopup trigger="hover" className={classes.popup}>
+                      Geometri från datakälla
+                    </RPopup>
+                    <RStyle.RStyle>
+                      {geom.getType() === "Point" ? (
+                        <RStyle.RCircle radius={8}>
+                          <RStyle.RStroke color="red" width={1} />
+                          <RStyle.RFill color="rgb(128 0 0 / 0.2)" />
+                        </RStyle.RCircle>
+                      ) : (
+                        <RStyle.RStroke color="red" width={1} />
+                      )}
+                    </RStyle.RStyle>
+                  </RFeature>
+                ))}
               </RLayerVector>
             ) : null}
             <RLayerVector zIndex={10}>

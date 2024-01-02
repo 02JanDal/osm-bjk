@@ -35,7 +35,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_trees_gavle AS
         )
  SELECT 5 AS dataset_id,
     16 AS layer_id,
-    gavle_trees.id AS upstream_item_id,
+    ARRAY[gavle_trees.id] AS upstream_item_ids,
     CASE
         WHEN (osm_trees.id IS NULL) THEN gavle_trees.geometry
         ELSE NULL::GEOMETRY

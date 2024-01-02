@@ -61,7 +61,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_schools_skolverket AS
         )
  SELECT 109 AS dataset_id,
     5 AS layer_id,
-    q.upstream_item_id,
+    q.upstream_item_ids,
     q.suggested_geom,
     q.suggested_tags,
     q.osm_element_id,
@@ -69,7 +69,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_schools_skolverket AS
     q.title,
     q.description,
     '' AS note
-   FROM ( SELECT matched.id AS upstream_item_id,
+   FROM ( SELECT ARRAY[matched.id] AS upstream_item_ids,
                 CASE
                     WHEN matched.osm_id IS NULL THEN matched.geometry
                     ELSE NULL::GEOMETRY
@@ -88,7 +88,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_schools_skolverket AS
            FROM matched
           WHERE ((public.tag_diff(matched.osm_tags, matched.ups_tags - 'operator' - 'name') <> '{}'::jsonb) OR (lower(matched.osm_tags->>'name') <> lower(matched.ups_tags->>'name')) OR (lower(matched.osm_tags->>'operator') <> lower(matched.ups_tags->>'operator')))
         UNION ALL
-         SELECT NULL::BIGINT AS upstream_item_id,
+         SELECT ARRAY[]::BIGINT[] AS upstream_item_ids,
             NULL::GEOMETRY AS suggested_geom,
             schools.id AS osm_element_id,
             schools.type AS osm_element_type,

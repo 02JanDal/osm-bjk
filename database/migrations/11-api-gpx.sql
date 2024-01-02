@@ -6,7 +6,7 @@ DECLARE
    title TEXT;
    description TEXT;
    suggested_tags TEXT;
-   upstream_item_id BIGINT;
+   upstream_item_ids BIGINT[];
    original_attributes TEXT;
    fetched_at TIMESTAMPTZ;
 BEGIN
@@ -15,9 +15,9 @@ BEGIN
 	SELECT deviation.title INTO title FROM api.deviation WHERE id = $1;
 	SELECT deviation.description INTO description FROM api.deviation WHERE id = $1;
 	SELECT STRING_AGG(a.key || '=' || a.value, '  -  ') INTO suggested_tags FROM api.deviation, jsonb_each_text(deviation.suggested_tags) as a WHERE id = $1;
-	SELECT deviation.upstream_item_id INTO upstream_item_id FROM api.deviation WHERE id = $1;
-	SELECT item.fetched_at INTO fetched_at FROM upstream.item WHERE id = upstream_item_id;
-	SELECT STRING_AGG(a.key || '=' || a.value, '  -  ') INTO original_attributes FROM upstream.item, jsonb_each_text(item.original_attributes) as a WHERE id = upstream_item_id;
+	SELECT deviation.upstream_item_ids INTO upstream_item_ids FROM api.deviation WHERE id = $1;
+	SELECT MIN(item.fetched_at) INTO fetched_at FROM upstream.item WHERE id = ANY(upstream_item_ids);
+	SELECT STRING_AGG(a.key || '=' || a.value, '  -  ') INTO original_attributes FROM upstream.item, jsonb_each_text(item.original_attributes) as a WHERE id = ANY(upstream_item_ids);
 
 	RETURN XMLELEMENT(
     	NAME "gpx",

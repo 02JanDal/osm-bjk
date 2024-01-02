@@ -75,7 +75,7 @@ export type DeviationRow = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     original_attributes: Record<string, any>;
     updated_at?: string;
-  };
+  }[];
   nearby?: DeviationRow[];
 };
 

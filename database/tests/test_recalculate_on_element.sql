@@ -56,7 +56,7 @@ BEGIN
     CREATE VIEW upstream.v_deviation_test_dataset AS
         SELECT i.dataset_id AS dataset_id,
                (SELECT id FROM api.layer) AS layer_id,
-               i.id AS upstream_item_id,
+               ARRAY[i.id] AS upstream_item_ids,
                CASE WHEN o.id IS NULL THEN i.geometry
                    ELSE NULL::geometry
                    END AS suggested_geom,
@@ -66,14 +66,15 @@ BEGIN
                CASE WHEN o.id IS NULL THEN 'Missing'::text
                    ELSE 'Incomplete'::text
                    END AS title,
-                ''::text AS description
+                ''::text AS description,
+                ''::text AS note
         FROM (SELECT * FROM upstream.item) i
         LEFT JOIN (SELECT * FROM osm.element WHERE element.tags->>'amenity' = 'toilets' AND element.type IN ('n', 'a')) o ON ST_DWithin(o.geom, i.geometry, 100)
         WHERE o.id IS NULL OR o.tags->>'name' IS DISTINCT FROM i.original_attributes->>'name'
     UNION ALL
         SELECT (SELECT id FROM api.dataset) AS dataset_id,
                (SELECT id FROM api.layer) AS layer_id,
-               NULL::bigint AS upstream_item_id,
+               ARRAY[]::bigint[] AS upstream_item_ids,
                NULL::geometry AS suggested_geom,
                element.id AS osm_element_id,
                element.type AS osm_element_type,

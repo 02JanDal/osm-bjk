@@ -27,7 +27,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_lifesaving_gavle
         )
  SELECT 8 AS dataset_id,
     16 AS layer_id,
-    gavle_objs.id AS upstream_item_id,
+    ARRAY[gavle_objs.id] AS upstream_item_ids,
     CASE
         WHEN osm_objs.id IS NULL THEN gavle_objs.geometry
         ELSE NULL::geometry

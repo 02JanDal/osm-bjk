@@ -1,7 +1,7 @@
 CREATE OR REPLACE VIEW upstream.v_deviation_preschools_scb AS
  SELECT 110 AS dataset_id,
     15 AS layer_id,
-    i.id AS upstream_item_id,
+    ARRAY[i.id] AS upstream_item_ids,
     CASE
         WHEN (p.id IS NULL) THEN i.geometry
         ELSE NULL::GEOMETRY
@@ -37,7 +37,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_preschools_scb AS
 UNION ALL
  SELECT 110 AS dataset_id,
     15 AS layer_id,
-    NULL::BIGINT AS upstream_item_id,
+    ARRAY[]::BIGINT[] AS upstream_item_ids,
     NULL::GEOMETRY AS suggested_geom,
     NULL::JSONB AS suggested_tags,
     element.id AS osm_element_id,

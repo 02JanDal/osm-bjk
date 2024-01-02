@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS api.deviation (
     id BIGINT NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     layer_id BIGINT NOT NULL REFERENCES api.layer(id) ON DELETE RESTRICT,
     dataset_id BIGINT NOT NULL REFERENCES upstream.dataset(id) ON DELETE RESTRICT,
-    upstream_item_id BIGINT,
     osm_element_id BIGINT,
     osm_element_type osm.element_type,
     suggested_geom GEOMETRY(Geometry, 3006),
@@ -16,15 +15,17 @@ CREATE TABLE IF NOT EXISTS api.deviation (
     action api.action_type,
     action_at TIMESTAMPTZ,
     note TEXT DEFAULT '' NOT NULL,
-    CONSTRAINT uniq UNIQUE NULLS NOT DISTINCT (layer_id, dataset_id, upstream_item_id, osm_element_id, osm_element_type, title),
-    CONSTRAINT deviation_upstream_item_id_fkey FOREIGN KEY (dataset_id, upstream_item_id) REFERENCES upstream.item(dataset_id, id) ON DELETE CASCADE
+    view_name TEXT NOT NULL,
+    upstream_item_ids BIGINT[] DEFAULT ARRAY[]::bigint[] NOT NULL
 );
+ALTER TABLE IF EXISTS api.deviation
+    ADD CONSTRAINT uniq UNIQUE NULLS NOT DISTINCT (dataset_id, layer_id, upstream_item_ids, osm_element_id, osm_element_type, title, view_name);
 
 CREATE TYPE upstream.calculated_deviation AS
 (
 	dataset_id integer,
 	layer_id integer,
-	upstream_item_id bigint,
+	upstream_item_ids bigint[],
 	suggested_geom geometry,
 	suggested_tags jsonb,
 	osm_element_id bigint,
@@ -44,10 +45,10 @@ CREATE OR REPLACE FUNCTION api.osm_geom(api.deviation) RETURNS GEOMETRY
   SELECT geom FROM osm.element WHERE element.type = $1.osm_element_type AND element.id = $1.osm_element_id;
 $_$;
 
-CREATE OR REPLACE FUNCTION api.upstream_item(api.deviation) RETURNS upstream.item
+CREATE OR REPLACE FUNCTION api.upstream_item(api.deviation) RETURNS SETOF upstream.item
     LANGUAGE sql STABLE SECURITY DEFINER PARALLEL SAFE
     AS $_$
-  SELECT * FROM upstream.item WHERE id = $1.upstream_item_id;
+  SELECT item.* FROM upstream.item WHERE id = ANY($1.upstream_item_ids);
 $_$;
 
 CREATE OR REPLACE FUNCTION api.nearby(
@@ -123,7 +124,6 @@ CREATE INDEX IF NOT EXISTS deviation_municipality_code_idx ON api.deviation USIN
 CREATE INDEX IF NOT EXISTS deviation_osm_item_type_osm_item_id_idx ON api.deviation USING btree (osm_element_type, osm_element_id);
 CREATE INDEX IF NOT EXISTS deviation_suggested_geom_idx ON api.deviation USING gist (suggested_geom);
 CREATE INDEX IF NOT EXISTS deviation_title_idx ON api.deviation USING btree (title);
-CREATE INDEX IF NOT EXISTS deviation_upstream_item_id_idx ON api.deviation USING btree (upstream_item_id);
 
 -- endregion
 

@@ -12,6 +12,7 @@ import makeLink from "../lib/id.ts";
 import Disclaimer from "../components/Disclaimer.tsx";
 import classes from "./deviation.module.css";
 import { LineString } from "ol/geom";
+import Markdown from "react-markdown";
 
 const TagKeyLink: FC<{ keyString: string }> = (props) => (
   <Anchor href={`https://wiki.openstreetmap.org/wiki/Key:${props.keyString}`} target="_blank">
@@ -197,7 +198,7 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
         {deviation.note.trim().length > 0 ? (
           <>
             <h3>Information till åtgärd</h3>
-            <p>{deviation.note.trim()}</p>
+            <Markdown>{deviation.note.trim()}</Markdown>
           </>
         ) : null}
 

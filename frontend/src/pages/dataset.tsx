@@ -6,7 +6,8 @@ import { Link } from "wouter";
 import { IconBug } from "@tabler/icons-react";
 import { RFeature, RLayerVector, RMap, ROSM } from "rlayers";
 import { GeoJSON } from "ol/format";
-import { getCenter } from "ol/extent";
+import { boundingExtent, getCenter } from "ol/extent";
+import { fromLonLat } from "ol/proj";
 
 const geojson = new GeoJSON();
 
@@ -19,7 +20,9 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
       await postgrest.from("dataset").select("*,provider(name),extent").eq("id", id).single().throwOnError(),
   });
 
-  const extent = geojson.readGeometry(dataset.data!.extent).transform("EPSG:3006", "EPSG:3857");
+  const extent = dataset.data?.extent
+    ? geojson.readGeometry(dataset.data!.extent).transform("EPSG:3006", "EPSG:3857")
+    : null;
 
   return (
     <Grid grow w="100%" styles={{ inner: { height: "100%" } }}>
@@ -66,11 +69,22 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
             bottom: 0,
           }}
         >
-          <RMap width="100%" height="100%" initial={{ center: getCenter(extent.getExtent()), zoom: 5 }}>
+          <RMap
+            width="100%"
+            height="100%"
+            initial={{
+              center: getCenter(
+                extent ? extent.getExtent() : boundingExtent([fromLonLat([10.03, 54.96]), fromLonLat([24.17, 69.07])]),
+              ),
+              zoom: 5,
+            }}
+          >
             <ROSM />
-            <RLayerVector zIndex={10}>
-              <RFeature geometry={extent} />
-            </RLayerVector>
+            {extent ? (
+              <RLayerVector zIndex={10}>
+                <RFeature geometry={extent} />
+              </RLayerVector>
+            ) : null}
           </RMap>
         </div>
       </Grid.Col>

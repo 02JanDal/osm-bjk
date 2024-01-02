@@ -3,7 +3,7 @@ from datetime import timedelta, datetime
 from airflow import DAG, Dataset
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
-for dataset_id, view_name, dataset_name in [(110, "preschools_scb", "forskolor")]:
+for view_name, dataset_name in [("preschools_scb", "forskolor")]:
     with DAG(
         f"deviations-{view_name}",
         description=f"Updates deviations based on v_deviations_{view_name}",
@@ -22,5 +22,5 @@ for dataset_id, view_name, dataset_name in [(110, "preschools_scb", "forskolor")
         tags=["provider:SCB", "type:Deviations"],
     ):
         SQLExecuteQueryOperator(
-            task_id="deviations", conn_id="PG_OSM", sql=f"SELECT upstream.sync_deviations('{view_name}', {dataset_id})"
+            task_id="deviations", conn_id="PG_OSM", sql=f"SELECT upstream.sync_deviations('{view_name}')"
         )

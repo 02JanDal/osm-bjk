@@ -3,11 +3,11 @@ from datetime import timedelta, datetime
 from airflow import DAG, Dataset
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
-for dataset_id, view_name, dataset_name in [
-    (4, "badplatser_gavle", "badplatser"),
-    (5, "trees_gavle", "tradskotsel"),
-    (8, "lifesaving_gavle", "livraddningsutrustning"),
-    (17, "atervinning_gavle", "atervinning"),
+for view_name, dataset_name in [
+    ("badplatser_gavle", "badplatser"),
+    ("trees_gavle", "tradskotsel"),
+    ("lifesaving_gavle", "livraddningsutrustning"),
+    ("atervinning_gavle", "atervinning"),
 ]:
     with DAG(
         f"deviations-{view_name}",
@@ -27,5 +27,5 @@ for dataset_id, view_name, dataset_name in [
         tags=["provider:Gävle kommun", "type:Deviations"],
     ):
         SQLExecuteQueryOperator(
-            task_id="deviations", conn_id="PG_OSM", sql=f"SELECT upstream.sync_deviations('{view_name}', {dataset_id})"
+            task_id="deviations", conn_id="PG_OSM", sql=f"SELECT upstream.sync_deviations('{view_name}')"
         )

@@ -56,7 +56,7 @@ export type DeviationRow = {
   suggested_geom: object;
   osm_element_id: number;
   osm_element_type: "n" | "w" | "a" | "r";
-  suggested_tags: object;
+  suggested_tags: Record<string, string | null>;
   title: string;
   description: string;
   center: object;

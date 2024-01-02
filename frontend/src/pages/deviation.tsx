@@ -6,13 +6,15 @@ import { Link } from "wouter";
 import { actualElementId, actualElementType, getElement } from "../lib/osm.ts";
 import { RFeature, RLayerVector, RMap, ROSM, RPopup, RStyle } from "rlayers";
 import { GeoJSON } from "ol/format";
-import { getCenter } from "ol/extent";
+import { buffer, getCenter } from "ol/extent";
 import TimeAgo from "../components/TimeAgo.tsx";
 import makeLink from "../lib/id.ts";
 import Disclaimer from "../components/Disclaimer.tsx";
 import classes from "./deviation.module.css";
 import { LineString } from "ol/geom";
 import Markdown from "react-markdown";
+import { addNode, loadAndZoom } from "../lib/josm.ts";
+import { fromExtent } from "ol/geom/Polygon";
 
 const TagKeyLink: FC<{ keyString: string }> = (props) => (
   <Anchor href={`https://wiki.openstreetmap.org/wiki/Key:${props.keyString}`} target="_blank">
@@ -93,6 +95,9 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
     geojson.readGeometry(i.geometry).transform("EPSG:3006", "EPSG:3857"),
   );
 
+  const geom = geojson.readGeometry(deviation.center);
+  const extent = geom.clone().transform("EPSG:3006", "EPSG:3857").getExtent();
+
   return (
     <Grid grow w="100%" styles={{ inner: { height: "100%" } }}>
       <Grid.Col span={{ base: 12, sm: 6, md: 5, xl: 3 }}>
@@ -123,11 +128,46 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
           >
             Öppna i iD
           </Button>
-          <Tooltip label="Under arbete">
-            <Button fullWidth disabled>
-              Öppna i JOSM
-            </Button>
-          </Tooltip>
+          <Button
+            fullWidth
+            onClick={() => {
+              const josmExtent = fromExtent(buffer(geom.getExtent(), 500))
+                .transform("EPSG:3006", "EPSG:4326")
+                .getExtent();
+              loadAndZoom(
+                josmExtent[0],
+                josmExtent[1],
+                josmExtent[2],
+                josmExtent[3],
+                {
+                  select: deviation.osm_element_id
+                    ? [
+                        [
+                          actualElementType(deviation.osm_element_type, deviation.osm_element_id),
+                          actualElementId(deviation.osm_element_type, deviation.osm_element_id),
+                        ],
+                      ]
+                    : undefined,
+                  addTags: deviation.osm_element_id ? deviation.suggested_tags : undefined,
+                  changesetSource: `${deviation.dataset!.provider!.name} ${deviation.dataset!.name}`,
+                  changesetHashtags: ["bastajavlakartan"],
+                  changesetComment: deviation.title,
+                },
+                () => {
+                  const suggested = geojson.readGeometry(deviation.suggested_geom);
+                  if (suggested.getType() === "Point") {
+                    const center = getCenter(suggested.transform("EPSG:3006", "EPSG:4326").getExtent());
+                    setTimeout(
+                      () => addNode(center[1], center[0], deviation.suggested_tags as Record<string, string>),
+                      1000, // not sure why, but JOSM gives a 400 if calling add_node to quickly
+                    );
+                  }
+                },
+              );
+            }}
+          >
+            Öppna i JOSM
+          </Button>
         </Button.Group>
         <Button.Group w="100%" mt={10}>
           <Button
@@ -207,16 +247,25 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
             <h3>Föreslagna taggar</h3>
             <Table>
               <Table.Tbody>
-                {Object.entries(deviation.suggested_tags).map(([key, value]) => (
-                  <Table.Tr key={key}>
-                    <Table.Th>
-                      <TagKeyLink keyString={key} />
-                    </Table.Th>
-                    <Table.Td>
-                      <TagValueLink keyString={key} value={value} />
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
+                {Object.entries(deviation.suggested_tags).map(([key, value]) =>
+                  value === null ? (
+                    <Table.Tr key={key}>
+                      <Table.Th>
+                        <TagKeyLink keyString={key} />
+                      </Table.Th>
+                      <Table.Td style={{ color: "red", fontStyle: "italic" }}>Felaktig/inte längre aktuell</Table.Td>
+                    </Table.Tr>
+                  ) : (
+                    <Table.Tr key={key}>
+                      <Table.Th>
+                        <TagKeyLink keyString={key} />
+                      </Table.Th>
+                      <Table.Td>
+                        <TagValueLink keyString={key} value={value} />
+                      </Table.Td>
+                    </Table.Tr>
+                  ),
+                )}
               </Table.Tbody>
             </Table>
           </>
@@ -364,7 +413,7 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
             width="100%"
             height="100%"
             initial={{
-              center: getCenter(geojson.readGeometry(deviation.center).transform("EPSG:3006", "EPSG:3857").getExtent()),
+              center: getCenter(extent),
               zoom: 16,
             }}
           >
@@ -378,7 +427,10 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
                       <RStyle.RFill color="rgb(0 0 128 / 0.2)" />
                     </RStyle.RCircle>
                   ) : (
-                    <RStyle.RStroke color="blue" width={1} />
+                    <>
+                      <RStyle.RStroke color="blue" width={1} />
+                      <RStyle.RFill color="rgb(0 0 128 / 0.1)" />
+                    </>
                   )}
                 </RStyle.RStyle>
                 <RFeature geometry={osmGeom}>

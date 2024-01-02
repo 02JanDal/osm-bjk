@@ -85,7 +85,7 @@ spec:
     spec:
       containers:
         - name: postgrest
-          image: postgrest/postgrest:v11.2.0
+          image: postgrest/postgrest:v12.0.2
           imagePullPolicy: IfNotPresent
           env:
             - name: PGUSER
@@ -128,6 +128,8 @@ spec:
             - name: PGRST_OPENAPI_MODE
               value: "ignore-privileges"
             - name: PGRST_DB_PLAN_ENABLED
+              value: "True"
+            - name: PGRST_SERVER_TIMING_ENABLED
               value: "True"
           ports:
             - name: http

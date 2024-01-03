@@ -8,6 +8,12 @@ for view_name, dataset_name in [
     ("trees_gavle", "tradskotsel"),
     ("lifesaving_gavle", "livraddningsutrustning"),
     ("atervinning_gavle", "atervinning"),
+    ("papperskorgar_gavle", "papperskorgar"),
+    ("parkeringsautomater_gavle", "parkeringsautomater"),
+    ("cykelpumpar_gavle", "cykelpumpar"),
+    ("parkmobler_gavle", "parkmobler"),
+    ("cykelparkeringsplatser_gavle", "cykelparkeringsplatser"),
+    ("historiskaskyltar_gavle", "historiskaskyltar"),
 ]:
     with DAG(
         f"deviations-{view_name}",

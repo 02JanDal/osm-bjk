@@ -23,17 +23,18 @@ metadata:
     nginx.ingress.kubernetes.io/auth-signin: "https://osm.jandal.se/auth/start?redirect=$pass_access_scheme://$http_host$escaped_request_uri"
     nginx.ingress.kubernetes.io/auth-response-headers: "X-User-ID,X-User-Name"
     nginx.ingress.kubernetes.io/auth-always-set-cookie: "true"
+    cert-manager.io/cluster-issuer: letsencrypt
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - osm.jandal.se
-      secretName: osm-jandal-tls
+        - pgadmin.osm.jandal.se
+      secretName: pgadmin-osm-jandal-tls
   rules:
-  - host: osm.jandal.se
+  - host: pgadmin.osm.jandal.se
     http:
       paths:
-      - path: /pgadmin
+      - path: /
         pathType: Prefix
         backend:
           service:
@@ -73,8 +74,6 @@ spec:
                 secretKeyRef:
                   name: pgadmin-password
                   key: pgadmin-password
-            - name: SCRIPT_NAME
-              value: /pgadmin
           ports:
             - name: http
               containerPort: 80

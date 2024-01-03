@@ -15,19 +15,12 @@ import {
   IconDatabaseStar,
 } from "@tabler/icons-react";
 import { Link } from "wouter";
-import { colorForDeviationCount } from "../lib/colors.ts";
-
-function bestDatasetType(datasets: { datasetType?: DatasetUsage | null }[]): DatasetUsage | undefined {
-  if (datasets.some((d) => d.datasetType === "automatic")) {
-    return "automatic";
-  } else if (datasets.some((d) => d.datasetType === "complete")) {
-    return "complete";
-  } else if (datasets.some((d) => d.datasetType === "advisory")) {
-    return "advisory";
-  } else {
-    return undefined;
-  }
-}
+import {
+  bestDatasetType,
+  colorForDatasetUsage,
+  colorForDeviationCount,
+  colorForMonthsSinceCheck,
+} from "../lib/colors.ts";
 
 const MunicipalityLayer: FC<{
   layer: LayerRow;
@@ -59,13 +52,19 @@ const MunicipalityLayer: FC<{
         >
           <ActionIcon variant="transparent" color="black">
             {monthsSinceCheck === undefined ? (
-              <IconClockX style={{ width: "70%", height: "70%", color: "lightgrey" }} />
+              <IconClockX style={{ width: "70%", height: "70%", color: colorForMonthsSinceCheck(monthsSinceCheck) }} />
             ) : monthsSinceCheck < 6 ? (
-              <IconClockCheck style={{ width: "70%", height: "70%", color: "darkgreen" }} />
+              <IconClockCheck
+                style={{ width: "70%", height: "70%", color: colorForMonthsSinceCheck(monthsSinceCheck) }}
+              />
             ) : monthsSinceCheck < 24 ? (
-              <IconClockQuestion style={{ width: "70%", height: "70%", color: "lime" }} />
+              <IconClockQuestion
+                style={{ width: "70%", height: "70%", color: colorForMonthsSinceCheck(monthsSinceCheck) }}
+              />
             ) : (
-              <IconClockExclamation style={{ width: "70%", height: "70%", color: "orange" }} />
+              <IconClockExclamation
+                style={{ width: "70%", height: "70%", color: colorForMonthsSinceCheck(monthsSinceCheck) }}
+              />
             )}
           </ActionIcon>
         </Tooltip>
@@ -74,11 +73,21 @@ const MunicipalityLayer: FC<{
             <Link to={`/datasets/${datasets[0].dataset!.id}?municipality=${municipality.code}`}>
               <ActionIcon variant="transparent" color="black">
                 {datasets[0].datasetType === "advisory" ? (
-                  <IconDatabase style={{ width: "70%", height: "70%", color: "lime" }} />
+                  <IconDatabase
+                    style={{ width: "70%", height: "70%", color: colorForDatasetUsage(datasets[0].datasetType) }}
+                  />
                 ) : datasets[0].datasetType === "complete" ? (
-                  <IconDatabaseStar style={{ width: "70%", height: "70%", color: "darkgreen" }} />
+                  <IconDatabaseStar
+                    style={{ width: "70%", height: "70%", color: colorForDatasetUsage(datasets[0].datasetType) }}
+                  />
                 ) : (
-                  <IconDatabaseCog style={{ width: "70%", height: "70%", color: "blue" }} />
+                  <IconDatabaseCog
+                    style={{
+                      width: "70%",
+                      height: "70%",
+                      color: colorForDatasetUsage(datasets[0].datasetType ?? undefined),
+                    }}
+                  />
                 )}
               </ActionIcon>
             </Link>
@@ -86,11 +95,17 @@ const MunicipalityLayer: FC<{
         ) : (
           <ActionIcon variant="transparent" color="black">
             {bestDatasetType(datasets) === "advisory" ? (
-              <IconDatabase style={{ width: "70%", height: "70%", color: "lime" }} />
+              <IconDatabase
+                style={{ width: "70%", height: "70%", color: colorForDatasetUsage(bestDatasetType(datasets)) }}
+              />
             ) : bestDatasetType(datasets) === "complete" ? (
-              <IconDatabaseStar style={{ width: "70%", height: "70%", color: "darkgreen" }} />
+              <IconDatabaseStar
+                style={{ width: "70%", height: "70%", color: colorForDatasetUsage(bestDatasetType(datasets)) }}
+              />
             ) : (
-              <IconDatabaseCog style={{ width: "70%", height: "70%", color: "blue" }} />
+              <IconDatabaseCog
+                style={{ width: "70%", height: "70%", color: colorForDatasetUsage(bestDatasetType(datasets)) }}
+              />
             )}
           </ActionIcon>
         )}

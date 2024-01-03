@@ -5,17 +5,16 @@ import { useQuery, useSuspenseQueries } from "@tanstack/react-query";
 import postgrest, { MunicipalityRow } from "../postgrest";
 import _ from "lodash";
 import { RLayerVectorTile, RMap, ROSM, RStyle, useOL } from "rlayers";
-import { fromLonLat } from "ol/proj";
 import { GeoJSON, MVT } from "ol/format";
-import { boundingExtent, getCenter } from "ol/extent";
+import { boundingExtent } from "ol/extent";
 import classes from "./deviations.module.css";
 import { Link, useLocation } from "wouter";
 import { Feature, Overlay } from "ol";
 import { importUrl } from "../lib/josm.ts";
+import { swedenExtent, swedenInitial } from "../lib/map.ts";
 
 const geojson = new GeoJSON();
 
-const extent = boundingExtent([fromLonLat([10.03, 54.96]), fromLonLat([24.17, 69.07])]);
 const Zoomer: FC<{ selected: string[]; municipalities: Pick<MunicipalityRow, "code" | "extent">[] }> = ({
   selected,
   municipalities,
@@ -39,7 +38,7 @@ const Zoomer: FC<{ selected: string[]; municipalities: Pick<MunicipalityRow, "co
   );
 
   useEffect(() => {
-    map.getView().fit(selectedExtent ?? extent);
+    map.getView().fit(selectedExtent ?? swedenExtent);
   }, [map, selectedExtent]);
 
   return null;
@@ -230,7 +229,7 @@ const Page: FC = () => {
             bottom: 0,
           }}
         >
-          <RMap width="100%" height="100%" initial={{ center: getCenter(extent), zoom: 5 }}>
+          <RMap width="100%" height="100%" initial={swedenInitial}>
             <Zoomer selected={(query.municipality as string[]) || []} municipalities={municipalities.data!} />
             <ROSM />
             <RLayerVectorTile

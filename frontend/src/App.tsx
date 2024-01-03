@@ -1,10 +1,11 @@
 import { FC, Suspense } from "react";
 
-import { Burger, Button, Group, AppShell, Loader, Flex, Alert } from "@mantine/core";
-import { Route, Switch } from "wouter";
+import { Burger, Button, Group, AppShell, Loader, Flex, Alert, Menu, rem } from "@mantine/core";
+import { Link, Route, Switch } from "wouter";
 
 import IndexPage from "./pages/index.tsx";
 import MunicipalitiesPage from "./pages/municipalities.tsx";
+import MunicipalitiesMapPage from "./pages/municipalities-map.tsx";
 import DeviationsPage from "./pages/deviations.tsx";
 import DatasetsPage from "./pages/datasets.tsx";
 import MunicipalityPage from "./pages/municipality.tsx";
@@ -17,7 +18,7 @@ import "ol/ol.css";
 import classes from "./App.module.css";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { ErrorBoundary } from "react-error-boundary";
-import { IconExclamationCircle } from "@tabler/icons-react";
+import { IconExclamationCircle, IconMap, IconTable } from "@tabler/icons-react";
 
 const App: FC = () => {
   const [opened, { toggle }] = useDisclosure(false);
@@ -40,18 +41,38 @@ const App: FC = () => {
 
         <Group justify="space-between" h="100%" w="100%">
           <Group h="100%" gap={0} visibleFrom="sm">
-            <a href="/" className={classes.link}>
+            <Link to="/" className={classes.link}>
               Hem
-            </a>
-            <a href="/municipalities" className={classes.link}>
-              Kommunvis
-            </a>
-            <a href="/deviations" className={classes.link}>
+            </Link>
+            <Menu trigger="hover" transitionProps={{ exitDuration: 0 }} withinPortal withArrow offset={1}>
+              <Menu.Target>
+                <Link to="/municipalities" className={classes.link}>
+                  Kommunvis
+                </Link>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item
+                  component={Link}
+                  to="/municipalities"
+                  leftSection={<IconTable style={{ width: rem(14), height: rem(14) }} />}
+                >
+                  Tabell
+                </Menu.Item>
+                <Menu.Item
+                  component={Link}
+                  to="/municipalities/map"
+                  leftSection={<IconMap style={{ width: rem(14), height: rem(14) }} />}
+                >
+                  Karta
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+            <Link to="/deviations" className={classes.link}>
               Avvikelser
-            </a>
-            <a href="/datasets" className={classes.link}>
+            </Link>
+            <Link to="/datasets" className={classes.link}>
               Datakällor
-            </a>
+            </Link>
           </Group>
 
           <Group visibleFrom="sm">
@@ -63,19 +84,48 @@ const App: FC = () => {
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
-        <a href="/" className={classes.link}>
+        <Link to="/" className={classes.link}>
           Hem
-        </a>
-        <a href="/municipalities" className={classes.link}>
-          Kommunvis
-        </a>
-        <a href="/deviations" className={classes.link}>
+        </Link>
+        <Menu
+          trigger="hover"
+          transitionProps={{ exitDuration: 0 }}
+          withinPortal
+          withArrow
+          position="right"
+          offset={-100}
+        >
+          <Menu.Target>
+            <Link to="/municipalities" className={classes.link}>
+              Kommunvis
+            </Link>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item
+              component={Link}
+              to="/municipalities"
+              leftSection={<IconTable style={{ width: rem(14), height: rem(14) }} />}
+            >
+              Tabell
+            </Menu.Item>
+            <Menu.Item
+              component={Link}
+              to="/municipalities/map"
+              leftSection={<IconMap style={{ width: rem(14), height: rem(14) }} />}
+            >
+              Karta
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+        <Link to="/deviations" className={classes.link}>
           Avvikelser
-        </a>
-        <a href="/datasets" className={classes.link}>
+        </Link>
+        <Link to="/datasets" className={classes.link}>
           Datakällor
-        </a>
-        <Button variant="default">Logga in</Button>
+        </Link>
+        <Button variant="default" display="none">
+          Logga in
+        </Button>
       </AppShell.Navbar>
 
       <AppShell.Main style={{ display: "flex", alignItems: "stretch" }}>
@@ -102,6 +152,7 @@ const App: FC = () => {
                 )}
               >
                 <Switch>
+                  <Route path="/municipalities/map" component={MunicipalitiesMapPage} />
                   <Route path="/municipalities/:code" component={MunicipalityPage} />
                   <Route path="/municipalities" component={MunicipalitiesPage} />
                   <Route path="/datasets/:id" component={DatasetPage} />

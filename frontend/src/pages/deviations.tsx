@@ -139,14 +139,21 @@ const Page: FC = () => {
           <MultiSelect
             value={(query.dataset as string[]) || []}
             onChange={(v) => setQuery({ dataset: v.length === 0 ? undefined : v })}
-            data={Object.entries(_.groupBy(datasets.data!, "provider.name")).map(([group, items]) => ({
-              group,
-              items: items.map((d) => ({
-                value: String(d.id),
-                label: d.name,
-                disabled: !deviationTitles.some((d_) => d_.dataset_id === d.id),
+            data={_.sortBy(
+              Object.entries(_.groupBy(datasets.data!, "provider.name")).map(([group, items]) => ({
+                group,
+                items: _.sortBy(
+                  items.map((d) => ({
+                    value: String(d.id),
+                    label: d.name,
+                    disabled: !deviationTitles.some((d_) => d_.dataset_id === d.id),
+                  })),
+                  "disabled",
+                ),
               })),
-            }))}
+              ({ items }) => items.every((i) => i.disabled),
+              "group",
+            )}
             clearable
             searchable
             label="Datakällor"

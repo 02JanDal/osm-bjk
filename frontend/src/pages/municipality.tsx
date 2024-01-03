@@ -65,7 +65,7 @@ const Page: FC<{ params: { code: string } }> = ({ params }) => {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {Object.entries(_.groupBy(deviations, "title")).map(([title, lyrs]) => (
+            {_.sortBy(Object.entries(_.groupBy(deviations, "title")), ([title, _]) => title).map(([title, lyrs]) => (
               <Table.Tr key={title}>
                 <Table.Td>{title}</Table.Td>
                 <Table.Td>{lyrs.reduce((prev, cur) => prev + cur.count, 0)}</Table.Td>

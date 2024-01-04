@@ -175,6 +175,7 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
             loading={isPerformingAction && variables === "fixed"}
             disabled={isPerformingAction}
             onClick={() => performAction("fixed")}
+            data-disabled={true}
           >
             Fixad nu
           </Button>
@@ -184,6 +185,7 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
               loading={isPerformingAction && variables === "already-fixed"}
               disabled={isPerformingAction}
               onClick={() => performAction("already-fixed")}
+              data-disabled={true}
             >
               Var redan fixad
             </Button>
@@ -200,6 +202,7 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
               loading={isPerformingAction && variables === "not-an-issue"}
               disabled={isPerformingAction}
               onClick={() => performAction("not-an-issue")}
+              data-disabled={true}
             >
               Inte ett problem
             </Button>
@@ -214,6 +217,7 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
               loading={isPerformingAction && variables === "deferred"}
               disabled={isPerformingAction}
               onClick={() => performAction("deferred")}
+              data-disabled={true}
             >
               Avvaktas med
             </Button>

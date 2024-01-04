@@ -1,7 +1,7 @@
 import { FC, Suspense } from "react";
 
 import { Burger, Button, Group, AppShell, Loader, Flex, Alert, Menu, rem } from "@mantine/core";
-import { Link, Route, Switch } from "wouter";
+import { Link, Route, Switch, useLocation } from "wouter";
 
 import IndexPage from "./pages/index.tsx";
 import MunicipalitiesPage from "./pages/municipalities.tsx";
@@ -23,6 +23,8 @@ import SystemStatus from "./pages/system-status.tsx";
 
 const App: FC = () => {
   const [opened, { toggle }] = useDisclosure(false);
+
+  const [location] = useLocation();
 
   return (
     <AppShell
@@ -47,7 +49,10 @@ const App: FC = () => {
             </Link>
             <Menu trigger="hover" transitionProps={{ exitDuration: 0 }} withinPortal withArrow offset={1}>
               <Menu.Target>
-                <Link to="/municipalities" className={classes.link}>
+                <Link
+                  to="/municipalities"
+                  className={`${classes.link} ${location.startsWith("/municipalities") ? classes.active : ""}`}
+                >
                   Kommunvis
                 </Link>
               </Menu.Target>
@@ -56,6 +61,7 @@ const App: FC = () => {
                   component={Link}
                   to="/municipalities"
                   leftSection={<IconTable style={{ width: rem(14), height: rem(14) }} />}
+                  className={location === "/municipalities" ? classes.menuActive : ""}
                 >
                   Tabell
                 </Menu.Item>
@@ -63,18 +69,28 @@ const App: FC = () => {
                   component={Link}
                   to="/municipalities/map"
                   leftSection={<IconMap style={{ width: rem(14), height: rem(14) }} />}
+                  className={location === "/municipalities/map" ? classes.menuActive : ""}
                 >
                   Karta
                 </Menu.Item>
               </Menu.Dropdown>
             </Menu>
-            <Link to="/deviations" className={classes.link}>
+            <Link
+              to="/deviations"
+              className={`${classes.link} ${location.startsWith("/deviations") ? classes.active : ""}`}
+            >
               Avvikelser
             </Link>
-            <Link to="/datasets" className={classes.link}>
+            <Link
+              to="/datasets"
+              className={`${classes.link} ${location.startsWith("/datasets") ? classes.active : ""}`}
+            >
               Datakällor
             </Link>
-            <Link to="/system/status" className={classes.link}>
+            <Link
+              to="/system/status"
+              className={`${classes.link} ${location.startsWith("/system/status") ? classes.active : ""}`}
+            >
               Systemstatus
             </Link>
           </Group>
@@ -100,7 +116,10 @@ const App: FC = () => {
           offset={-100}
         >
           <Menu.Target>
-            <Link to="/municipalities" className={classes.link}>
+            <Link
+              to="/municipalities"
+              className={`${classes.link} ${location.startsWith("/municipalities") ? classes.active : ""}`}
+            >
               Kommunvis
             </Link>
           </Menu.Target>
@@ -109,6 +128,7 @@ const App: FC = () => {
               component={Link}
               to="/municipalities"
               leftSection={<IconTable style={{ width: rem(14), height: rem(14) }} />}
+              className={location === "/municipalities" ? classes.menuActive : ""}
             >
               Tabell
             </Menu.Item>
@@ -116,18 +136,25 @@ const App: FC = () => {
               component={Link}
               to="/municipalities/map"
               leftSection={<IconMap style={{ width: rem(14), height: rem(14) }} />}
+              className={location === "/municipalities/map" ? classes.menuActive : ""}
             >
               Karta
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
-        <Link to="/deviations" className={classes.link}>
+        <Link
+          to="/deviations"
+          className={`${classes.link} ${location.startsWith("/deviations") ? classes.active : ""}`}
+        >
           Avvikelser
         </Link>
-        <Link to="/datasets" className={classes.link}>
+        <Link to="/datasets" className={`${classes.link} ${location.startsWith("/datasets") ? classes.active : ""}`}>
           Datakällor
         </Link>
-        <Link to="/system/status" className={classes.link}>
+        <Link
+          to="/system/status"
+          className={`${classes.link} ${location.startsWith("/system/status") ? classes.active : ""}`}
+        >
           Systemstatus
         </Link>
         <Button variant="default" display="none">

@@ -26,4 +26,12 @@
   @mixin hover {
     background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
   }
+
+  &.active {
+    background-color: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
+  }
+}
+
+.menuActive {
+  background-color: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
 }

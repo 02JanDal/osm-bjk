@@ -31,7 +31,7 @@ spec:
   - host: osm.jandal.se
     http:
       paths:
-      - path: /api(?!/rpc/gpx)(?!/rpc/osmchange)(/|$)(.*)
+      - path: /api(?!/rpc/gpx)(?!/rpc/osmchange)(?!/airflow)(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:

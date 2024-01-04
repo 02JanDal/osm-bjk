@@ -1,0 +1,77 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: osm-airflow
+  name: airflow-query
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /airflow/api/v1/$1
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Authorization "Basic cHVibGljOnB1YmxpYw==";
+      proxy_pass_header Authorization;
+      if ($request_method != GET) {
+        return 403;
+      }
+    nginx.ingress.kubernetes.io/limit-connections: "20"
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+    nginx.ingress.kubernetes.io/limit-rpm: "100"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET,OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "origin,content-type,accept"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "http://localhost:5173, https://osm.jandal.se, https://osm-bjk.jandal.se"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - osm.jandal.se
+      secretName: osm-jandal-tls
+  rules:
+  - host: osm.jandal.se
+    http:
+      paths:
+      - path: /api/airflow/(dags/[^/]+/dagRuns|dags|datasets)$
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: airflow-webserver
+            port:
+              name: airflow-ui
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: osm-airflow
+  name: airflow-trigger
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /airflow/api/v1/dags/$1/dagRuns
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Authorization "Basic cHVibGljOnB1YmxpYw==";
+      proxy_pass_header Authorization;
+      if ($request_method != POST) {
+        return 405;
+      }
+    nginx.ingress.kubernetes.io/limit-connections: "20"
+    nginx.ingress.kubernetes.io/limit-rps: "1"
+    nginx.ingress.kubernetes.io/limit-rpm: "5"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "POST,OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "origin,content-type,accept"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "http://localhost:5173, https://osm.jandal.se, https://osm-bjk.jandal.se"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - osm.jandal.se
+      secretName: osm-jandal-tls
+  rules:
+  - host: osm.jandal.se
+    http:
+      paths:
+      - path: /api/airflow/trigger/([^/]+)$
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: airflow-webserver
+            port:
+              name: airflow-ui

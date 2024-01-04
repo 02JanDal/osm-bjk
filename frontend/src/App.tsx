@@ -19,6 +19,7 @@ import classes from "./App.module.css";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { ErrorBoundary } from "react-error-boundary";
 import { IconExclamationCircle, IconMap, IconTable } from "@tabler/icons-react";
+import SystemStatus from "./pages/system-status.tsx";
 
 const App: FC = () => {
   const [opened, { toggle }] = useDisclosure(false);
@@ -73,6 +74,9 @@ const App: FC = () => {
             <Link to="/datasets" className={classes.link}>
               Datakällor
             </Link>
+            <Link to="/system/status" className={classes.link}>
+              Systemstatus
+            </Link>
           </Group>
 
           <Group visibleFrom="sm">
@@ -123,6 +127,9 @@ const App: FC = () => {
         <Link to="/datasets" className={classes.link}>
           Datakällor
         </Link>
+        <Link to="/system/status" className={classes.link}>
+          Systemstatus
+        </Link>
         <Button variant="default" display="none">
           Logga in
         </Button>
@@ -159,6 +166,7 @@ const App: FC = () => {
                   <Route path="/datasets" component={DatasetsPage} />
                   <Route path="/deviations/:id" component={DeviationPage} />
                   <Route path="/deviations" component={DeviationsPage} />
+                  <Route path="/system/status" component={SystemStatus} />
                   <Route path="/" component={IndexPage} />
                 </Switch>
               </ErrorBoundary>

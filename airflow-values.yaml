@@ -327,6 +327,8 @@ extraEnv: |
         key: password
   - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
     value: postgresql://$(PGUSER):$(PGPASSWORD)@db-r/app
+  - name: AIRFLOW__API__AUTH_BACKENDS
+    value: airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
 # eg:
 # extraEnv: |
 #   - name: AIRFLOW__CORE__LOAD_EXAMPLES

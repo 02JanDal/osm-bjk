@@ -24,7 +24,7 @@ function useDAGStatus(dag: DAG) {
   const dagRun = useQuery({
     queryKey: ["airflow", "dags", dag.dag_id, "runs"],
     queryFn: () =>
-      getDAGRuns(dag.dag_id, { limit: 5, orderBy: "-start_date", state: ["queued", "running", "success"] }),
+      getDAGRuns(dag.dag_id, { limit: 5, orderBy: "-start_date", state: ["queued", "running", "success", "failed"] }),
     retry: false,
     refetchOnWindowFocus: false,
     enabled: !dag.is_paused,
@@ -196,7 +196,7 @@ const ProcessCard: FC<{ dag: DAG; title: string; description: string; children?:
           <Group justify="space-between">
             <DAGIcon dag={dag} latest={latest} size="lg" icon={IconDownload} triggerable={triggerable} />
             {latestSuccess ? (
-              <Badge color={dag.is_paused ? "gray" : "blue"}>
+              <Badge color={dag.is_paused ? "gray" : latest?.state === "failed" ? "red" : "blue"}>
                 <TimeAgo date={latestSuccess.start_date} />
               </Badge>
             ) : null}

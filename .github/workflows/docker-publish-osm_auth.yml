@@ -4,8 +4,12 @@ on:
   push:
     branches: [ "main" ]
     tags: [ 'v*.*.*' ]
+    paths:
+      - osm-auth/**
   pull_request:
     branches: [ "main" ]
+    paths:
+      - osm-auth/**
 
 env:
   REGISTRY: ghcr.io

@@ -1,17 +1,23 @@
 from datetime import datetime, timedelta
-from typing import cast, Optional
+from typing import cast
 
 import shapely
 import ujson
 from airflow import DAG, Dataset
 from airflow.decorators import task
-from airflow.providers.postgres.hooks.postgres import PostgresHook
-from requests import Session
+from requests import Session, Response
 
 from osm_bjk import make_prefix
 from osm_bjk.fetch_dataframe_operator import get_or_create_dataset, upsert
 from osm_bjk.licenses import CC0_1_0
 from osm_bjk.pg_cursor import pg_cursor
+
+
+def get(session: Session, url: str) -> Response:
+    resp = session.get(url)
+    resp.raise_for_status()
+    return resp
+
 
 with DAG(
     "skolverket-skolenheter",
@@ -55,10 +61,10 @@ with DAG(
                 )
                 row = cur.fetchone()
                 if row is None or row[0] is None:
-                    units = http.get("https://api.skolverket.se/skolenhetsregistret/v1/skolenhet").json()
+                    units = get(http, "https://api.skolverket.se/skolenhetsregistret/v1/skolenhet").json()
                     units = [
-                        http.get(
-                            f"https://api.skolverket.se/skolenhetsregistret/v1/skolenhet/{unit['Skolenhetskod']}"
+                        get(
+                            http, f"https://api.skolverket.se/skolenhetsregistret/v1/skolenhet/{unit['Skolenhetskod']}"
                         ).json()["SkolenhetInfo"]
                         for unit in units["Skolenheter"]
                     ]
@@ -78,15 +84,24 @@ with DAG(
                         ),
                     )
                 else:
-                    changed = http.get(
-                        f"https://api.skolverket.se/skolenhetsregistret/v1/diff/skolenhet/{row[0].strftime('%Y%m%d')}"
+                    changed = get(
+                        http,
+                        f"https://api.skolverket.se/skolenhetsregistret/v1/diff/skolenhet/{row[0].strftime('%Y%m%d')}",
                     ).json()
-                    units = [
-                        http.get(f"https://api.skolverket.se/skolenhetsregistret/v1/skolenhet/{unit}").json()[
-                            "SkolenhetInfo"
-                        ]
-                        for unit in changed["Skolenhetskoder"]
-                    ]
+
+                    deleted = []
+
+                    def get_unit(code: str):
+                        unit = http.get(f"https://api.skolverket.se/skolenhetsregistret/v1/skolenhet/{code}")
+                        if unit.status_code == 410:
+                            deleted.append(code)
+                            return None
+                        unit.raise_for_status()
+                        return unit.json()["SkolenhetInfo"]
+
+                    units = [get_unit(unit) for unit in changed["Skolenhetskoder"]]
+                    units = [u for u in units if u is not None]
+
                     upsert(
                         cur,
                         (
@@ -109,6 +124,13 @@ with DAG(
                         ),
                         make_prefix(cast(str, run_id)),
                     )
+
+                    if deleted:
+                        print(f"Deleting {len(deleted)} items that were removed upstream")
+                        cur.execute(
+                            "DELETE FROM upstream.item WHERE dataset_id = %s AND original_id = ANY(%s)",
+                            (dataset_id, deleted),
+                        )
 
             cur.execute(
                 "UPDATE upstream.dataset SET fetched_at = %s WHERE id = %s",

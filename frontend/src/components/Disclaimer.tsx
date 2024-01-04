@@ -36,7 +36,15 @@ const Disclaimer: FC = () => {
           </Button>
         </Group>
       </Modal>
-      <Alert variant="light" color="yellow" title="Observera" icon={<IconZoomCheck />} withCloseButton onClose={open}>
+      <Alert
+        variant="light"
+        color="yellow"
+        title="Observera"
+        icon={<IconZoomCheck />}
+        withCloseButton
+        onClose={open}
+        mb="md"
+      >
         <p>
           Kom ihåg att inte alla datakällor är tillförlitliga, även om den kan tillhandahållas från en i övrigt
           officiell och tillförlitlig organisation som en myndighet.

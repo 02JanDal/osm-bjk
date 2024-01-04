@@ -100,7 +100,7 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
 
   return (
     <Grid grow w="100%" styles={{ inner: { height: "100%" } }}>
-      <Grid.Col span={{ base: 12, sm: 6, md: 5, xl: 3 }}>
+      <Grid.Col span={{ base: 12, sm: 6, md: 5, xl: 3 }} style={{ maxWidth: "var(--col-flex-basis)" }}>
         <h2 style={{ marginTop: 0 }}>{deviation.title}</h2>
         <p>{deviation.description}</p>
 

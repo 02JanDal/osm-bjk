@@ -2,12 +2,12 @@ name: Docker (osm_auth)
 
 on:
   push:
-    branches: [ "main" ]
-    tags: [ 'v*.*.*' ]
+    branches: ["main"]
+    tags: ["v*.*.*"]
     paths:
       - osm-auth/**
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
       - osm-auth/**
 

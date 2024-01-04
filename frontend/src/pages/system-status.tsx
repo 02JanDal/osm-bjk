@@ -1,4 +1,4 @@
-import { FC, useEffect, useMemo, useRef } from "react";
+import { FC, useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ActionIcon,
   Badge,
@@ -44,6 +44,7 @@ function useDAGStatus(dag: DAG) {
    * the user to refresh their browser as they see fit.
    */
 
+  const refetch = useCallback(() => dagRun.refetch(), [dagRun]);
   const latest = useMemo(() => dagRun.data?.dag_runs[0], [dagRun]);
   const latestState = useMemo(() => latest?.state, [latest]);
   const latestRunId = useMemo(() => latest?.dag_run_id, [latest]);
@@ -53,7 +54,7 @@ function useDAGStatus(dag: DAG) {
     }
     if (latestState !== "success") {
       // currently running, retry regularly
-      const timer = setInterval(() => dagRun.refetch(), 5 * 1000);
+      const timer = setInterval(() => refetch(), 5 * 1000);
       return () => clearInterval(timer);
     }
     if (dag.next_dagrun_create_after && !dag.is_paused) {
@@ -65,13 +66,13 @@ function useDAGStatus(dag: DAG) {
       }
       const timer = setTimeout(async () => {
         // refetch regularly until it gets started
-        while ((await dagRun.refetch()).data?.dag_runs[0].state === "success") {
+        while ((await refetch()).data?.dag_runs[0].state === "success") {
           await sleep(5 * 1000);
         }
       }, diff);
       return () => clearTimeout(timer);
     }
-  }, [dag.next_dagrun_create_after, latestState]);
+  }, [dag.next_dagrun_create_after, dag.is_paused, latestState, refetch]);
 
   const firstRunRef = useRef(true);
   useEffect(() => {
@@ -90,7 +91,7 @@ function useDAGStatus(dag: DAG) {
         exact: true,
       });
     }
-  }, [latestRunId, latestState]);
+  }, [latestRunId, latestState, queryClient]);
 
   return { dagRun, latest };
 }

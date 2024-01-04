@@ -105,7 +105,7 @@ interface GetDatasetsResult {
       updated_at: string;
     }[];
     created_at: string;
-    extra: {};
+    extra: Record<string, unknown>;
     id: string;
     producing_tasks: {
       dag_id: string;

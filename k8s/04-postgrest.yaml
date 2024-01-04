@@ -28,16 +28,16 @@ spec:
         - osm.jandal.se
       secretName: osm-jandal-tls
   rules:
-  - host: osm.jandal.se
-    http:
-      paths:
-      - path: /api(?!/rpc/gpx)(?!/rpc/osmchange)(?!/airflow)(/|$)(.*)
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: postgrest
-            port:
-              name: http
+    - host: osm.jandal.se
+      http:
+        paths:
+          - path: /api(?!/rpc/gpx)(?!/rpc/osmchange)(?!/airflow)(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: postgrest
+                port:
+                  name: http
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -55,16 +55,16 @@ spec:
         - osm.jandal.se
       secretName: osm-jandal-tls
   rules:
-  - host: osm.jandal.se
-    http:
-      paths:
-      - path: /api/rpc/gpx
-        pathType: Prefix
-        backend:
-          service:
-            name: postgrest
-            port:
-              name: http
+    - host: osm.jandal.se
+      http:
+        paths:
+          - path: /api/rpc/gpx
+            pathType: Prefix
+            backend:
+              service:
+                name: postgrest
+                port:
+                  name: http
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -82,16 +82,16 @@ spec:
         - osm.jandal.se
       secretName: osm-jandal-tls
   rules:
-  - host: osm.jandal.se
-    http:
-      paths:
-      - path: /api/rpc/osmchange
-        pathType: Prefix
-        backend:
-          service:
-            name: postgrest
-            port:
-              name: http
+    - host: osm.jandal.se
+      http:
+        paths:
+          - path: /api/rpc/osmchange
+            pathType: Prefix
+            backend:
+              service:
+                name: postgrest
+                port:
+                  name: http
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -201,16 +201,16 @@ spec:
         - osm.jandal.se
       secretName: osm-jandal-tls
   rules:
-  - host: osm.jandal.se
-    http:
-      paths:
-      - path: /api-docs
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: postgrest-swagger
-            port:
-              name: http
+    - host: osm.jandal.se
+      http:
+        paths:
+          - path: /api-docs
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: postgrest-swagger
+                port:
+                  name: http
 ---
 apiVersion: apps/v1
 kind: Deployment

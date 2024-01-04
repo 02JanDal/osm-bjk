@@ -25,16 +25,16 @@ spec:
         - osm.jandal.se
       secretName: osm-jandal-tls
   rules:
-  - host: osm.jandal.se
-    http:
-      paths:
-      - path: /auth
-        pathType: Prefix
-        backend:
-          service:
-            name: osm-auth
-            port:
-              number: 80
+    - host: osm.jandal.se
+      http:
+        paths:
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: osm-auth
+                port:
+                  number: 80
 ---
 apiVersion: apps/v1
 kind: Deployment

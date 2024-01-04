@@ -31,16 +31,16 @@ spec:
         - pgadmin.osm.jandal.se
       secretName: pgadmin-osm-jandal-tls
   rules:
-  - host: pgadmin.osm.jandal.se
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: pgadmin
-            port:
-              name: http
+    - host: pgadmin.osm.jandal.se
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pgadmin
+                port:
+                  name: http
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -98,7 +98,7 @@ spec:
         namespace: osm
         name: pgadmin-data
       spec:
-        accessModes: [ "ReadWriteOnce" ]
+        accessModes: ["ReadWriteOnce"]
         resources:
           requests:
             storage: 3Gi

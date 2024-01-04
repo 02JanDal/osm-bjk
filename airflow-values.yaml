@@ -128,10 +128,10 @@ ingress:
 
     # Annotations for the web Ingress
     annotations:
-#      nginx.ingress.kubernetes.io/auth-url: "http://osm-auth.osm.svc.cluster.local/auth"
-#      nginx.ingress.kubernetes.io/auth-signin: "https://osm.jandal.se/auth/start?redirect=$pass_access_scheme://$http_host$escaped_request_uri"
-#      nginx.ingress.kubernetes.io/auth-response-headers: "X-User-ID,X-User-Name"
-#      nginx.ingress.kubernetes.io/auth-always-set-cookie: "true"
+    #      nginx.ingress.kubernetes.io/auth-url: "http://osm-auth.osm.svc.cluster.local/auth"
+    #      nginx.ingress.kubernetes.io/auth-signin: "https://osm.jandal.se/auth/start?redirect=$pass_access_scheme://$http_host$escaped_request_uri"
+    #      nginx.ingress.kubernetes.io/auth-response-headers: "X-User-ID,X-User-Name"
+    #      nginx.ingress.kubernetes.io/auth-always-set-cookie: "true"
 
     # The path for the web Ingress
     path: "/airflow"
@@ -144,13 +144,13 @@ ingress:
 
     # The hostnames or hosts configuration for the web Ingress
     hosts:
-     - name: "osm.jandal.se"
-       # configs for web Ingress TLS
-       tls:
-         # Enable TLS termination for the web Ingress
-         enabled: true
-         # the name of a pre-created Secret containing a TLS private key and certificate
-         secretName: "osm-jandal-se"
+      - name: "osm.jandal.se"
+        # configs for web Ingress TLS
+        tls:
+          # Enable TLS termination for the web Ingress
+          enabled: true
+          # the name of a pre-created Secret containing a TLS private key and certificate
+          secretName: "osm-jandal-se"
 
     # The Ingress Class for the web Ingress (used only with Kubernetes v1.19 and above)
     ingressClassName: "nginx"
@@ -1958,7 +1958,12 @@ cleanup:
   # Command to use when running the cleanup cronjob (templated).
   command: ~
   # Args to use when running the cleanup cronjob (templated).
-  args: ["bash", "-c", "exec airflow kubernetes cleanup-pods --namespace={{ .Release.Namespace }}"]
+  args:
+    [
+      "bash",
+      "-c",
+      "exec airflow kubernetes cleanup-pods --namespace={{ .Release.Namespace }}",
+    ]
 
   # jobAnnotations are annotations on the cleanup CronJob
   jobAnnotations: {}
@@ -2034,27 +2039,27 @@ config:
   core:
     dags_folder: '{{ include "airflow_dags" . }}'
     # This is ignored when used with the official Docker image
-    load_examples: 'False'
-    executor: '{{ .Values.executor }}'
+    load_examples: "False"
+    executor: "{{ .Values.executor }}"
     # For Airflow 1.10, backward compatibility; moved to [logging] in 2.0
-    colored_console_log: 'False'
+    colored_console_log: "False"
     remote_logging: '{{- ternary "True" "False" .Values.elasticsearch.enabled }}'
     test_connection: Enabled
   logging:
     remote_logging: '{{- ternary "True" "False" .Values.elasticsearch.enabled }}'
-    colored_console_log: 'False'
+    colored_console_log: "False"
   metrics:
     statsd_on: '{{ ternary "True" "False" .Values.statsd.enabled }}'
     statsd_port: 9125
     statsd_prefix: airflow
     statsd_host: '{{ printf "%s-statsd" .Release.Name }}'
   webserver:
-    enable_proxy_fix: 'True'
+    enable_proxy_fix: "True"
     base_url: https://osm.jandal.se/airflow
     # For Airflow 1.10
-    rbac: 'True'
+    rbac: "True"
   celery:
-    flower_url_prefix: '{{ .Values.ingress.flower.path }}'
+    flower_url_prefix: "{{ .Values.ingress.flower.path }}"
     worker_concurrency: 16
   scheduler:
     standalone_dag_processor: '{{ ternary "True" "False" .Values.dagProcessor.enabled }}'
@@ -2066,36 +2071,36 @@ config:
     # `run_duration` included for Airflow 1.10 backward compatibility; removed in 2.0.
     run_duration: 41460
   elasticsearch:
-    json_format: 'True'
+    json_format: "True"
     log_id_template: "{dag_id}_{task_id}_{execution_date}_{try_number}"
   elasticsearch_configs:
     max_retries: 3
     timeout: 30
-    retry_timeout: 'True'
+    retry_timeout: "True"
   kerberos:
-    keytab: '{{ .Values.kerberos.keytabPath }}'
-    reinit_frequency: '{{ .Values.kerberos.reinitFrequency }}'
-    principal: '{{ .Values.kerberos.principal }}'
-    ccache: '{{ .Values.kerberos.ccacheMountPath }}/{{ .Values.kerberos.ccacheFileName }}'
+    keytab: "{{ .Values.kerberos.keytabPath }}"
+    reinit_frequency: "{{ .Values.kerberos.reinitFrequency }}"
+    principal: "{{ .Values.kerberos.principal }}"
+    ccache: "{{ .Values.kerberos.ccacheMountPath }}/{{ .Values.kerberos.ccacheFileName }}"
   celery_kubernetes_executor:
-    kubernetes_queue: 'kubernetes'
+    kubernetes_queue: "kubernetes"
   # The `kubernetes` section is deprecated in Airflow >= 2.5.0 due to an airflow.cfg schema change.
   # The `kubernetes` section can be removed once the helm chart no longer supports Airflow < 2.5.0.
   kubernetes:
-    namespace: '{{ .Release.Namespace }}'
+    namespace: "{{ .Release.Namespace }}"
     # The following `airflow_` entries are for Airflow 1, and can be removed when it is no longer supported.
     airflow_configmap: '{{ include "airflow_config" . }}'
     airflow_local_settings_configmap: '{{ include "airflow_config" . }}'
     pod_template_file: '{{ include "airflow_pod_template_file" . }}/pod_template_file.yaml'
-    worker_container_repository: '{{ .Values.images.airflow.repository | default .Values.defaultAirflowRepository }}'
-    worker_container_tag: '{{ .Values.images.airflow.tag | default .Values.defaultAirflowTag }}'
+    worker_container_repository: "{{ .Values.images.airflow.repository | default .Values.defaultAirflowRepository }}"
+    worker_container_tag: "{{ .Values.images.airflow.tag | default .Values.defaultAirflowTag }}"
     multi_namespace_mode: '{{ ternary "True" "False" .Values.multiNamespaceMode }}'
   # The `kubernetes_executor` section duplicates the `kubernetes` section in Airflow >= 2.5.0 due to an airflow.cfg schema change.
   kubernetes_executor:
-    namespace: '{{ .Release.Namespace }}'
+    namespace: "{{ .Release.Namespace }}"
     pod_template_file: '{{ include "airflow_pod_template_file" . }}/pod_template_file.yaml'
-    worker_container_repository: '{{ .Values.images.airflow.repository | default .Values.defaultAirflowRepository }}'
-    worker_container_tag: '{{ .Values.images.airflow.tag | default .Values.defaultAirflowTag }}'
+    worker_container_repository: "{{ .Values.images.airflow.repository | default .Values.defaultAirflowRepository }}"
+    worker_container_tag: "{{ .Values.images.airflow.tag | default .Values.defaultAirflowTag }}"
     multi_namespace_mode: '{{ ternary "True" "False" .Values.multiNamespaceMode }}'
 # yamllint enable rule:line-length
 

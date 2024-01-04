@@ -127,7 +127,7 @@ const Page: FC = () => {
                   <RStyle.RFill color={rgba(theme.colors[colorForDatasetUsage(currentStats.datasetType)][5], 0.7)} />
                 );
               },
-              [stats, query.style],
+              [stats, query.style, theme.colors],
             )}
           />
         </RLayerVectorTile>

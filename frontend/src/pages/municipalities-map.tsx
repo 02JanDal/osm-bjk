@@ -15,14 +15,14 @@ import { RLayerVectorTile, RMap, ROSM, RStyle } from "rlayers";
 import { swedenInitial } from "../lib/map.ts";
 import { MVT } from "ol/format";
 import { Feature } from "ol";
-import { createEnumParam, StringParam, useQueryParams } from "use-query-params";
+import { createEnumParam, StringParam, useQueryParams, withDefault } from "use-query-params";
 import _ from "lodash";
 import { useLocation } from "wouter";
 
 const Page: FC = () => {
   const [query, setQuery] = useQueryParams({
-    layer: StringParam,
-    style: createEnumParam(["checked", "dataset", "deviations"]),
+    layer: withDefault(StringParam, "1"),
+    style: withDefault(createEnumParam(["checked", "dataset", "deviations"]), "checked"),
   });
 
   const [{ data: municipalities }, { data: layers }] = useSuspenseQueries({
@@ -65,6 +65,7 @@ const Page: FC = () => {
       ]),
     );
   }, [municipalities.data, query.layer]);
+  console.log(query.style);
 
   const theme = useMantineTheme();
   const [_l, setLocation] = useLocation();
@@ -149,7 +150,7 @@ const Page: FC = () => {
         <Popover.Dropdown>
           <Select
             value={query.layer}
-            onChange={(v) => setQuery({ layer: v })}
+            onChange={(v) => setQuery({ layer: v || "checked" })}
             data={_.sortBy(layers.data!, "name").map((d) => ({
               value: String(d.id),
               label: d.name,

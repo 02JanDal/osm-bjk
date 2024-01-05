@@ -131,12 +131,7 @@ const Page: FC = () => {
                   />
                 ) : query.style === "deviations" ? (
                   <RStyle.RFill
-                    color={rgba(
-                      currentStats.deviationsCount
-                        ? theme.colors[colorForDeviationCount(currentStats.deviationsCount)][5]
-                        : "#D3D3D3",
-                      0.7,
-                    )}
+                    color={rgba(theme.colors[colorForDeviationCount(currentStats.deviationsCount)][5], 0.7)}
                   />
                 ) : (
                   <RStyle.RFill color={rgba(theme.colors[colorForDatasetUsage(currentStats.datasetType)][5], 0.7)} />

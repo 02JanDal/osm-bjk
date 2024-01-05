@@ -1,6 +1,6 @@
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrayParam, useQueryParams } from "use-query-params";
-import { Button, Grid, MultiSelect, Stack } from "@mantine/core";
+import { Button, Grid, MultiSelect, Stack, Switch } from "@mantine/core";
 import { useQuery, useSuspenseQueries } from "@tanstack/react-query";
 import postgrest, { MunicipalityRow } from "../postgrest";
 import _ from "lodash";
@@ -12,6 +12,7 @@ import { Link, useLocation } from "wouter";
 import { Feature, Overlay } from "ol";
 import { importUrl } from "../lib/josm.ts";
 import { swedenExtent, swedenInitial } from "../lib/map.ts";
+import { useLocalStorage } from "@mantine/hooks";
 
 const geojson = new GeoJSON();
 
@@ -45,12 +46,18 @@ const Zoomer: FC<{ selected: string[]; municipalities: Pick<MunicipalityRow, "co
 };
 
 const Page: FC = () => {
-  const [query, setQuery] = useQueryParams({
-    dataset: ArrayParam,
-    municipality: ArrayParam,
-    layer: ArrayParam,
-    deviation: ArrayParam,
-  });
+  const [query, setQuery] = useQueryParams(
+    {
+      dataset: ArrayParam,
+      municipality: ArrayParam,
+      layer: ArrayParam,
+      deviation: ArrayParam,
+    },
+    { removeDefaultsFromUrl: true },
+  );
+
+  const [openSingle, setOpenSingle] = useLocalStorage({ key: "deviations.openSingle", defaultValue: true });
+  const [openNewTab, setOpenNewTab] = useLocalStorage({ key: "deviations.openNewTab", defaultValue: false });
 
   const [{ data: datasets }, { data: municipalities }, { data: layers }] = useSuspenseQueries({
     queries: [
@@ -194,6 +201,16 @@ const Page: FC = () => {
             searchable
             label="Typ"
           />
+          <Switch
+            checked={!openSingle}
+            onChange={(event) => setOpenSingle(!event.currentTarget.checked)}
+            label="Öppna alltid popup"
+          />
+          <Switch
+            checked={openNewTab}
+            onChange={(event) => setOpenNewTab(event.currentTarget.checked)}
+            label="Öppna avvikelser i ny flik"
+          />
           <hr
             style={{ margin: 0, border: "none", borderBottom: "1px solid var(--mantine-color-gray-4)", width: "100%" }}
           />
@@ -263,8 +280,12 @@ const Page: FC = () => {
                 const features = evt.map.getFeaturesAtPixel(evt.pixel, {
                   layerFilter: (layer) => layer.getZIndex() === 20,
                 });
-                if (features.length === 1) {
-                  navigate(`/deviations/${features[0].getId()}`);
+                if (features.length === 1 && openSingle) {
+                  if (openNewTab) {
+                    window.open(`/deviations/${features[0].getId()}`, "_blank");
+                  } else {
+                    navigate(`/deviations/${features[0].getId()}`);
+                  }
                   setSelectedFeatures([]);
                 } else {
                   setSelectedFeatures(features as Feature[]);
@@ -302,11 +323,17 @@ const Page: FC = () => {
           >
             <a href="#" className={classes.olPopupCloser} onClick={() => setSelectedFeatures([])}></a>
             <div>
-              {selectedFeatures.length > 1 ? (
+              {selectedFeatures.length > 0 ? (
                 <ul>
                   {selectedFeatures.map((f) => (
                     <li key={f.getId()}>
-                      <Link to={`/deviations/${f.getId()}`}>{f.get("title")}</Link>
+                      {openNewTab ? (
+                        <a href={`/deviations/${f.getId()}`} target="_blank">
+                          {f.get("title")}
+                        </a>
+                      ) : (
+                        <Link to={`/deviations/${f.getId()}`}>{f.get("title")}</Link>
+                      )}
                     </li>
                   ))}
                 </ul>

@@ -1,15 +1,30 @@
 import { FC, useCallback, useMemo } from "react";
 import { useSuspenseQueries } from "@tanstack/react-query";
 import postgrest from "../postgrest.ts";
-import { ActionIcon, Popover, SegmentedControl, Select, rgba, useMantineTheme } from "@mantine/core";
+import {
+  ActionIcon,
+  Popover,
+  SegmentedControl,
+  Select,
+  rgba,
+  useMantineTheme,
+  Title,
+  Stack,
+  Group,
+  Box,
+} from "@mantine/core";
 import { differenceInMonths } from "date-fns";
 
 import { IconPalette } from "@tabler/icons-react";
 import {
+  ABOVE,
   bestDatasetType,
   colorForDatasetUsage,
   colorForDeviationCount,
   colorForMonthsSinceCheck,
+  COLORS_FOR_DATASET_USAGE,
+  COLORS_FOR_DEVIATION_COUNT,
+  COLORS_FOR_MONTHS_SINCE_CHECK,
 } from "../lib/colors.ts";
 import { RLayerVectorTile, RMap, ROSM, RStyle } from "rlayers";
 import { swedenInitial } from "../lib/map.ts";
@@ -65,7 +80,6 @@ const Page: FC = () => {
       ]),
     );
   }, [municipalities.data, query.layer]);
-  console.log(query.style);
 
   const theme = useMantineTheme();
   const [_l, setLocation] = useLocation();
@@ -109,7 +123,7 @@ const Page: FC = () => {
                         colorForMonthsSinceCheck(
                           currentStats.lastChecked
                             ? differenceInMonths(new Date(), new Date(currentStats.lastChecked))
-                            : undefined,
+                            : null,
                         )
                       ][5],
                       0.7,
@@ -133,7 +147,14 @@ const Page: FC = () => {
           />
         </RLayerVectorTile>
       </RMap>
-      <Popover width={200} position="left-start" withArrow arrowPosition="center" shadow="sm" defaultOpened>
+      <Popover
+        width={query.style === "checked" ? 300 : 200}
+        position="left-start"
+        withArrow
+        arrowPosition="center"
+        shadow="sm"
+        defaultOpened
+      >
         <Popover.Target>
           <ActionIcon
             style={{
@@ -172,6 +193,51 @@ const Page: FC = () => {
             style={{ marginTop: "var(--mantine-spacing-xs)" }}
             disabled={!query.layer}
           />
+          <Title order={5} mt="sm">
+            Färgförklaring
+          </Title>
+          {query.style === "checked" ? (
+            <Stack gap={0}>
+              {COLORS_FOR_MONTHS_SINCE_CHECK.map(([count, color], idx) => (
+                <Group key={idx}>
+                  <Box w={10} h={10} bg={color} />
+                  {count === null
+                    ? "Aldrig kontrollerat"
+                    : count === ABOVE
+                      ? `Mer än ${COLORS_FOR_MONTHS_SINCE_CHECK.slice(-3, -2)[0][0] as number} månader sedan`
+                      : `${count} eller färre månader sedan`}
+                </Group>
+              ))}
+            </Stack>
+          ) : query.style === "dataset" ? (
+            <Stack gap={0}>
+              {COLORS_FOR_DATASET_USAGE.map(([dataset, color], idx) => (
+                <Group key={idx}>
+                  <Box w={10} h={10} bg={color} />
+                  {dataset === ABOVE
+                    ? "Datakälla saknas"
+                    : dataset === "advisory"
+                      ? "Vägledande"
+                      : dataset === "complete"
+                        ? "Fullständig"
+                        : "Automatisk"}
+                </Group>
+              ))}
+            </Stack>
+          ) : (
+            <Stack gap={0}>
+              {COLORS_FOR_DEVIATION_COUNT.map(([count, color], idx) => (
+                <Group key={idx}>
+                  <Box w={10} h={10} bg={color} />
+                  {count === ABOVE
+                    ? `Fler än ${COLORS_FOR_DEVIATION_COUNT.slice(-2, -1)[0][0] as number}`
+                    : count === 0
+                      ? "Inga avvikelser"
+                      : `${count} eller färre`}
+                </Group>
+              ))}
+            </Stack>
+          )}
         </Popover.Dropdown>
       </Popover>
     </div>

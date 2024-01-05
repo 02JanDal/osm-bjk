@@ -1,42 +1,39 @@
 import { MantineColor } from "@mantine/core";
 import { DatasetUsage } from "../postgrest.ts";
 
+export const ABOVE = Symbol("above");
+
+export const COLORS_FOR_DEVIATION_COUNT: [number | typeof ABOVE, MantineColor][] = [
+  [0, "green"],
+  [10, "yellow"],
+  [100, "orange"],
+  [ABOVE, "red"],
+];
 export function colorForDeviationCount(count: number): MantineColor {
-  if (count === 0) {
-    return "green";
-  } else if (count < 10) {
-    return "yellow";
-  } else if (count < 100) {
-    return "orange";
-  } else {
-    return "red";
-  }
+  return COLORS_FOR_DEVIATION_COUNT.find(([c, _]) => c === ABOVE || count <= c)![1];
 }
 
+export const COLORS_FOR_DATASET_USAGE: [DatasetUsage | typeof ABOVE, MantineColor][] = [
+  ["automatic", "blue"],
+  ["complete", "green"],
+  ["advisory", "lime"],
+  [ABOVE, "gray"],
+];
 export function colorForDatasetUsage(usage: DatasetUsage | undefined): MantineColor {
-  if (usage === "advisory") {
-    return "lime";
-  } else if (usage === "complete") {
-    return "green";
-  } else if (usage === "automatic") {
-    return "blue";
-  } else {
-    return "gray";
-  }
+  return COLORS_FOR_DATASET_USAGE.find(([u, _]) => usage === u || u === ABOVE)![1];
 }
 
-export function colorForMonthsSinceCheck(monthsSinceCheck: number | undefined): MantineColor {
-  if (monthsSinceCheck === undefined) {
-    return "red";
-  } else if (monthsSinceCheck < 6) {
-    return "green";
-  } else if (monthsSinceCheck < 24) {
-    return "lime";
-  } else if (monthsSinceCheck < 36) {
-    return "yellow";
-  } else {
-    return "orange";
-  }
+export const COLORS_FOR_MONTHS_SINCE_CHECK: [number | typeof ABOVE | null, MantineColor][] = [
+  [6, "green"],
+  [24, "lime"],
+  [36, "yellow"],
+  [ABOVE, "orange"],
+  [null, "red"],
+];
+export function colorForMonthsSinceCheck(monthsSinceCheck: number | null): MantineColor {
+  return COLORS_FOR_MONTHS_SINCE_CHECK.find(([m, _]) =>
+    monthsSinceCheck === null ? m === null : m === ABOVE || (m !== null && monthsSinceCheck <= m),
+  )![1];
 }
 
 export function bestDatasetType(datasets: { datasetType?: DatasetUsage | null }[]): DatasetUsage | undefined {

@@ -36,7 +36,7 @@ const MunicipalityLayer: FC<{
   municipality: Pick<MunicipalityRow, "name" | "code">;
   deviations: number;
 }> = ({ lastChecked, datasets, municipality, layer, deviations }) => {
-  const monthsSinceCheck = lastChecked ? differenceInMonths(new Date(), new Date(lastChecked)) : undefined;
+  const monthsSinceCheck = lastChecked ? differenceInMonths(new Date(), new Date(lastChecked)) : null;
 
   return (
     <>
@@ -51,7 +51,7 @@ const MunicipalityLayer: FC<{
           }
         >
           <ActionIcon variant="transparent" color="black">
-            {monthsSinceCheck === undefined ? (
+            {monthsSinceCheck === null ? (
               <IconClockX style={{ width: "70%", height: "70%", color: colorForMonthsSinceCheck(monthsSinceCheck) }} />
             ) : monthsSinceCheck < 6 ? (
               <IconClockCheck

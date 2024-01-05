@@ -6,6 +6,7 @@ import pandas as pd
 from airflow import DAG, Dataset
 from airflow.decorators import task
 from airflow.models import Variable, TaskInstance
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sensors.base import PokeReturnValue
 
 from osm_bjk.fetch_dataframe_operator import FetchDataframeOperator
@@ -19,7 +20,7 @@ from osm_bjk.lantmateriet import (
 from osm_bjk.licenses import CC0_1_0
 
 
-from typing import TYPE_CHECKING, TypedDict, Literal, List
+from typing import TYPE_CHECKING, TypedDict, Literal
 
 if TYPE_CHECKING:
     if sys.version_info < (3, 11):
@@ -207,3 +208,26 @@ with DAG(
     tags=["provider:Lantmäteriet"],
 ):
     pass
+
+
+for view_name, dataset_name in [("anlaggningsomradespunkt_topo50", "anlaggningsomrade/anlaggningsomradespunkt")]:
+    with DAG(
+        f"deviations-{view_name}",
+        description=f"Updates deviations based on v_deviations_{view_name}",
+        schedule=[Dataset(f"psql://upstream/lm/topo50/{dataset_name}")],
+        start_date=datetime(2024, 1, 5, 0, 0),
+        catchup=False,
+        max_active_runs=1,
+        default_args=dict(
+            depends_on_past=False,
+            email=["jan@dalheimer.de"],
+            email_on_failure=True,
+            email_on_retry=False,
+            retries=1,
+            retry_delay=timedelta(minutes=5),
+        ),
+        tags=["provider:Lantmäteriet", "type:Deviations"],
+    ):
+        SQLExecuteQueryOperator(
+            task_id="deviations", conn_id="PG_OSM", sql=f"SELECT upstream.sync_deviations('{view_name}')"
+        )

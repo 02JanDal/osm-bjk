@@ -22,5 +22,8 @@ for view_name, dataset_name in [("preschools_scb", "forskolor")]:
         tags=["provider:SCB", "type:Deviations"],
     ):
         SQLExecuteQueryOperator(
-            task_id="deviations", conn_id="PG_OSM", sql=f"SELECT upstream.sync_deviations('{view_name}')"
+            task_id="deviations",
+            conn_id="PG_OSM",
+            sql=f"SELECT upstream.sync_deviations('{view_name}')",
+            outlets=[Dataset("psql://api/deviations")],
         )

@@ -229,5 +229,8 @@ for view_name, dataset_name in [("anlaggningsomradespunkt_topo50", "anlaggningso
         tags=["provider:Lantmäteriet", "type:Deviations"],
     ):
         SQLExecuteQueryOperator(
-            task_id="deviations", conn_id="PG_OSM", sql=f"SELECT upstream.sync_deviations('{view_name}')"
+            task_id="deviations",
+            conn_id="PG_OSM",
+            sql=f"SELECT upstream.sync_deviations('{view_name}')",
+            outlets=[Dataset("psql://api/deviations")],
         )

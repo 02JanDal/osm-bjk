@@ -33,5 +33,8 @@ for view_name, dataset_name in [
         tags=["provider:Gävle kommun", "type:Deviations"],
     ):
         SQLExecuteQueryOperator(
-            task_id="deviations", conn_id="PG_OSM", sql=f"SELECT upstream.sync_deviations('{view_name}')"
+            task_id="deviations",
+            conn_id="PG_OSM",
+            sql=f"SELECT upstream.sync_deviations('{view_name}')",
+            outlets=[Dataset("psql://api/deviations")],
         )

@@ -21,5 +21,8 @@ with DAG(
     tags=["provider:Skolverket", "type:Deviations"],
 ):
     SQLExecuteQueryOperator(
-        task_id="deviations", conn_id="PG_OSM", sql="SELECT upstream.sync_deviations('schools_skolverket')"
+        task_id="deviations",
+        conn_id="PG_OSM",
+        sql="SELECT upstream.sync_deviations('schools_skolverket')",
+        outlets=[Dataset("psql://api/deviations")],
     )

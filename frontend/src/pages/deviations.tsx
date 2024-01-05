@@ -1,6 +1,6 @@
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrayParam, useQueryParams } from "use-query-params";
-import { Button, Grid, MultiSelect, Stack, Switch } from "@mantine/core";
+import { Button, Grid, Group, MultiSelect, Stack, Switch, Title } from "@mantine/core";
 import { useQuery, useSuspenseQueries } from "@tanstack/react-query";
 import postgrest, { MunicipalityRow } from "../postgrest";
 import _ from "lodash";
@@ -12,9 +12,23 @@ import { Link, useLocation } from "wouter";
 import { Feature, Overlay } from "ol";
 import { importUrl } from "../lib/josm.ts";
 import { swedenExtent, swedenInitial } from "../lib/map.ts";
-import { useLocalStorage } from "@mantine/hooks";
+import { useLocalStorage, useSessionStorage } from "@mantine/hooks";
+import { Box } from "@mantine/core";
+import { Coordinate } from "ol/coordinate";
 
 const geojson = new GeoJSON();
+
+// for some reason not properly exported from rlayers, so we redefine it here
+interface RView {
+  center: Coordinate;
+  zoom: number;
+  resolution?: number;
+}
+function useSessionStorageMapView(key: string, initial: RView): [RView, (view: RView) => void] {
+  const [stored, setStored] = useSessionStorage<RView>({ key, defaultValue: initial });
+
+  return [stored, setStored];
+}
 
 const Zoomer: FC<{ selected: string[]; municipalities: Pick<MunicipalityRow, "code" | "extent">[] }> = ({
   selected,
@@ -58,6 +72,7 @@ const Page: FC = () => {
 
   const [openSingle, setOpenSingle] = useLocalStorage({ key: "deviations.openSingle", defaultValue: true });
   const [openNewTab, setOpenNewTab] = useLocalStorage({ key: "deviations.openNewTab", defaultValue: false });
+  const [view, setView] = useSessionStorageMapView("deviations.mapView", swedenInitial);
 
   const [{ data: datasets }, { data: municipalities }, { data: layers }] = useSuspenseQueries({
     queries: [
@@ -95,10 +110,12 @@ const Page: FC = () => {
   const colors = useMemo(
     () =>
       Object.fromEntries(
-        _.uniq(deviationTitlesData?.data?.map((d) => d.title) || []).map((title, idx, list) => [
-          title,
-          [`hsl(${(idx * 360) / list.length}deg 80% 50%)`, `hsl(${(idx * 360) / list.length}deg 80% 40%)`],
-        ]),
+        _.uniq(deviationTitlesData?.data?.map((d) => d.title) || [])
+          .sort()
+          .map((title, idx, list) => [
+            title,
+            [`hsl(${(idx * 360) / list.length}deg 80% 50%)`, `hsl(${(idx * 360) / list.length}deg 80% 40%)`],
+          ]),
       ),
     [deviationTitlesData?.data],
   );
@@ -140,8 +157,8 @@ const Page: FC = () => {
 
   return (
     <Grid grow w="100%" styles={{ inner: { height: "100%" } }}>
-      <Grid.Col span={{ base: 0, sm: 4, md: 3, lg: 3, xl: 2 }}>
-        <Stack h="100%">
+      <Grid.Col span={{ base: 0, sm: 4, md: 3, lg: 3, xl: 2 }} style={{ maxWidth: "var(--col-flex-basis)" }}>
+        <Stack h="100%" gap="sm">
           <MultiSelect
             value={(query.dataset as string[]) || []}
             onChange={(v) => setQuery({ dataset: v.length === 0 ? undefined : v })}
@@ -214,6 +231,9 @@ const Page: FC = () => {
           <hr
             style={{ margin: 0, border: "none", borderBottom: "1px solid var(--mantine-color-gray-4)", width: "100%" }}
           />
+          <p style={{ marginTop: 0, marginBottom: "calc(-1 * var(--grid-gutter)/2)" }}>
+            Hittade {countResults} avvikelser
+          </p>
           <Button.Group orientation="vertical">
             <Button variant="light" component="a" href={osmChangeUrl}>
               Hämta osmChange
@@ -231,9 +251,20 @@ const Page: FC = () => {
               Öppna alla i JOSM
             </Button>
           </Button.Group>
-          <p style={{ marginTop: "auto", marginBottom: "calc(-1 * var(--grid-gutter)/2)" }}>
-            Hittade {countResults} avvikelser
-          </p>
+          <hr
+            style={{ margin: 0, border: "none", borderBottom: "1px solid var(--mantine-color-gray-4)", width: "100%" }}
+          />
+          <Title order={4}>Färgförklaring</Title>
+          <Stack gap={0}>
+            {_.sortBy(Object.entries(colors), ([title, _]) => title)
+              .filter(([title, _]) => deviationTitles.some((dt) => dt.title === title))
+              .map(([title, [ca, cb]]) => (
+                <Group key={title} style={{ flexWrap: "nowrap" }}>
+                  <Box w={15} h={15} bg={cb} style={{ border: `2px solid ${ca}`, borderRadius: "100%" }} />
+                  <div style={{ overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{title}</div>
+                </Group>
+              ))}
+          </Stack>
         </Stack>
       </Grid.Col>
       <Grid.Col span={{ base: 12, sm: 8, md: 9, lg: 9, xl: 10 }}>
@@ -246,7 +277,7 @@ const Page: FC = () => {
             bottom: 0,
           }}
         >
-          <RMap width="100%" height="100%" initial={swedenInitial}>
+          <RMap width="100%" height="100%" initial={view} view={[view, setView]}>
             <Zoomer selected={(query.municipality as string[]) || []} municipalities={municipalities.data!} />
             <ROSM />
             <RLayerVectorTile

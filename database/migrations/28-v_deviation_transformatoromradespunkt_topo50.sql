@@ -11,8 +11,8 @@ SELECT 149 AS dataset_id,
     missing.tags AS suggested_tags,
     NULL::bigint AS osm_element_id,
     NULL::osm.element_type AS osm_element_type,
-    SUBSTRING(missing.original_attributes->>'objekttyp' FROM '^[^, ]+') || ' saknas' AS title,
-	'Enligt Lantmäteriets 1:50 000 karta ska det finnas en ' || LOWER(SUBSTRING(missing.original_attributes->>'objekttyp' FROM '^[^, ]+')) || ' här' AS description,
+    'Transformatorområde saknas' AS title,
+	'Enligt Lantmäteriets 1:50 000 karta ska det finnas ett transformatorområde här' AS description,
 	'' AS note
 FROM missing;
 

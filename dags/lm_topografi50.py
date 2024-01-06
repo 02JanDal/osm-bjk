@@ -210,7 +210,13 @@ with DAG(
     pass
 
 
-for view_name, dataset_name in [("anlaggningsomradespunkt_topo50", "anlaggningsomrade/anlaggningsomradespunkt")]:
+for view_name, dataset_name in [
+    ("anlaggningsomradespunkt_topo50", "anlaggningsomrade/anlaggningsomradespunkt"),
+    ("anlaggningsomrade_topo50", "anlaggningsomrade/anlaggningsomrade"),
+    ("byggnadsanlaggningspunkt_topo50", "byggnadsverk/byggnadsanlaggningspunkt"),
+    ("transformatoromradespunkt_topo50", "ledningar/transformatoromradespunkt"),
+    ("transformatoromrade_topo50", "ledningar/transformatoromrade"),
+]:
     with DAG(
         f"deviations-{view_name}",
         description=f"Updates deviations based on v_deviations_{view_name}",

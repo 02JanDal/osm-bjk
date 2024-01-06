@@ -1,4 +1,4 @@
-CREATE VIEW upstream.v_deviation_anlaggningsomradespunkt_topo50 AS
+CREATE OR REPLACE VIEW upstream.v_deviation_anlaggningsomradespunkt_topo50 AS
 WITH gavle AS (
          SELECT municipality.geom
            FROM api.municipality

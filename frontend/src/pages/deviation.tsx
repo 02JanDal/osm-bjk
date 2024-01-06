@@ -97,6 +97,7 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
 
   const geom = geojson.readGeometry(deviation.center);
   const extent = geom.clone().transform("EPSG:3006", "EPSG:3857").getExtent();
+  const center4326 = getCenter(geom.transform("EPSG:3006", "EPSG:4326").getExtent());
 
   return (
     <Grid grow w="100%" styles={{ inner: { height: "100%" } }}>
@@ -123,6 +124,7 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
               gpx: deviation.suggested_geom
                 ? `https://osm.jandal.se/api/rpc/gpx?deviation_id=${deviation.id}`
                 : undefined,
+              map: !deviation.osm_element_id ? [16, center4326[1], center4326[0]] : undefined,
             })}
             target="_blank"
           >

@@ -5,7 +5,7 @@ import geopandas
 import pandas as pd
 from airflow import DAG, Dataset
 from airflow.decorators import task
-from airflow.models import Variable, TaskInstance
+from airflow.models import Variable, TaskInstance, BaseOperator
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sensors.base import PokeReturnValue
 
@@ -190,6 +190,17 @@ with DAG(
             check_ready_t >> op
 
 
+class FetchUpdate(BaseOperator):
+    def __init__(
+        self,
+        *,
+        layer: Layer,
+        sublayer: Sublayer,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+
+
 with DAG(
     "lm-topografi50-update",
     description="Hämtar Topografi 50 från Lantmäteriet (FÖRÄNDRING)",
@@ -207,7 +218,24 @@ with DAG(
     ),
     tags=["provider:Lantmäteriet"],
 ):
-    pass
+
+    @task()
+    def start():
+        pass
+
+    start_t = start()
+
+    for layer in LAYERS:
+        for sublayer in layer["sublayers"]:
+            layer_slug = to_slug(layer["name"])
+            sublayer_slug = sublayer["slug"] if "slug" in sublayer else to_slug(sublayer["name"], "_")
+            op_update = FetchUpdate(
+                task_id=f"fetch-{layer_slug}-{sublayer_slug}",
+                layer=layer,
+                sublayer=sublayer,
+                outlets=[Dataset(f"psql://upstream/lm/topo50/{layer_slug}/{sublayer_slug}")],
+            )
+            start_t >> op_update
 
 
 for view_name, dataset_name in [

@@ -1,7 +1,7 @@
 import { FC } from "react";
 import postgrest, { DatasetRow, DeviationRow, ProviderRow } from "../postgrest.ts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, Anchor, Button, Grid, Loader, Table, Text, Tooltip, Flex } from "@mantine/core";
+import { Alert, Anchor, Button, Grid, Loader, Table, Text, Tooltip, Flex, Group } from "@mantine/core";
 import { Link } from "wouter";
 import { actualElementId, actualElementType, getElement } from "../lib/osm.ts";
 import { RFeature, RLayerVector, RMap, ROSM, RPopup, RStyle } from "rlayers";
@@ -65,16 +65,6 @@ const Page: FC<{
     note: string;
 
     osm_geom?: object;
-    upstream_item: {
-      id: number;
-      dataset_id: number;
-      url?: string;
-      original_id?: string;
-      geometry: object;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      original_attributes: Record<string, any>;
-      updated_at?: string;
-    }[];
     dataset:
       | (Pick<DatasetRow, "id" | "name" | "url" | "license" | "fetched_at"> & {
           provider: Pick<ProviderRow, "name"> | null;
@@ -90,6 +80,16 @@ const Page: FC<{
     queryKey: ["osm-element", osm_element_type, osm_element_id],
     enabled: !!osm_element_id,
     queryFn: async () => await getElement(osm_element_type!, osm_element_id!),
+  });
+  const { status, data: upstreamData } = useQuery({
+    queryKey: ["deviation", deviation.id, "upstream_item"],
+    queryFn: async () =>
+      await postgrest
+        .from("deviation")
+        .select("id,upstream_item(id,url,geometry,updated_at)")
+        .eq("id", deviation.id)
+        .single()
+        .throwOnError(),
   });
 
   const queryClient = useQueryClient();
@@ -112,7 +112,7 @@ const Page: FC<{
   const suggestedGeom = deviation.suggested_geom
     ? geojson.readGeometry(deviation.suggested_geom).transform("EPSG:3006", "EPSG:3857")
     : undefined;
-  const upstreamGeom = deviation.upstream_item.map((i) =>
+  const upstreamGeom = upstreamData?.data?.upstream_item.map((i) =>
     geojson.readGeometry(i.geometry).transform("EPSG:3006", "EPSG:3857"),
   );
 
@@ -364,29 +364,44 @@ const Page: FC<{
                 <TimeAgo date={deviation.dataset!.fetched_at} />
               </Table.Td>
             </Table.Tr>
-            {deviation.upstream_item.some((i) => i.updated_at) ? (
+            {status === "success" ? (
+              <>
+                {upstreamData?.data?.upstream_item.some((i) => i.updated_at) ? (
+                  <Table.Tr>
+                    <Table.Th rowSpan={upstreamData?.data?.upstream_item.filter((i) => i.updated_at).length}>
+                      Källobjekt{" "}
+                      {upstreamData?.data?.upstream_item.filter((i) => i.updated_at).length > 1
+                        ? "uppdaterade"
+                        : "uppdaterat"}
+                      :
+                    </Table.Th>
+                    {upstreamData?.data?.upstream_item
+                      .filter((i) => i.updated_at)
+                      .map((i) => (
+                        <Table.Td key={i.id}>
+                          <TimeAgo date={i.updated_at!} />
+                        </Table.Td>
+                      ))}
+                  </Table.Tr>
+                ) : null}
+                {upstreamData?.data?.upstream_item.some((i) => i.url) ? (
+                  <Table.Tr>
+                    <Table.Th rowSpan={upstreamData?.data?.upstream_item.filter((i) => i.url).length}>
+                      Länk till källobjekt:
+                    </Table.Th>
+                    {upstreamData?.data?.upstream_item
+                      .filter((i) => i.url)
+                      .map((i) => <Table.Td key={i.id}>{i.url}</Table.Td>)}
+                  </Table.Tr>
+                ) : null}
+              </>
+            ) : status === "pending" ? (
               <Table.Tr>
-                <Table.Th rowSpan={deviation.upstream_item.filter((i) => i.updated_at).length}>
-                  Källobjekt{" "}
-                  {deviation.upstream_item.filter((i) => i.updated_at).length > 1 ? "uppdaterade" : "uppdaterat"}:
-                </Table.Th>
-                {deviation.upstream_item
-                  .filter((i) => i.updated_at)
-                  .map((i) => (
-                    <Table.Td key={i.id}>
-                      <TimeAgo date={i.updated_at!} />
-                    </Table.Td>
-                  ))}
-              </Table.Tr>
-            ) : null}
-            {deviation.upstream_item.some((i) => i.url) ? (
-              <Table.Tr>
-                <Table.Th rowSpan={deviation.upstream_item.filter((i) => i.url).length}>Länk till källobjekt:</Table.Th>
-                {deviation.upstream_item
-                  .filter((i) => i.url)
-                  .map((i) => (
-                    <Table.Td key={i.id}>{i.url}</Table.Td>
-                  ))}
+                <Table.Td colSpan={2}>
+                  <Group w="100%" justify="center" mt="sm">
+                    <Loader size="xs" />
+                  </Group>
+                </Table.Td>
               </Table.Tr>
             ) : null}
           </Table.Tbody>
@@ -539,7 +554,7 @@ const PageOuter: FC<{ params: { id: string } }> = ({ params }) => {
       await postgrest
         .from("deviation")
         .select(
-          "*,osm_geom,upstream_item(*),dataset(id,name,provider(name),url,license,fetched_at),layer(id,name,description),nearby(id,title,center)",
+          "*,osm_geom,dataset(id,name,provider(name),url,license,fetched_at),layer(id,name,description),nearby(id,title,center)",
         )
         .eq("id", id)
         .single()

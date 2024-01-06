@@ -66,17 +66,18 @@ export type DeviationRow = {
   note: string;
 
   osm_geom?: object;
-  upstream_item?: {
-    id: number;
-    dataset_id: number;
-    url?: string;
-    original_id?: string;
-    geometry: object;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    original_attributes: Record<string, any>;
-    updated_at?: string;
-  }[];
+  upstream_item?: UpstreamItemRow[];
   nearby?: DeviationRow[];
+};
+export type UpstreamItemRow = {
+  id: number;
+  dataset_id: number;
+  url?: string;
+  original_id?: string;
+  geometry: object;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  original_attributes: Record<string, any>;
+  updated_at?: string;
 };
 
 interface ApiSchema {
@@ -164,8 +165,6 @@ interface ApiSchema {
   Views: {
     dataset: {
       Row: DatasetRow;
-      Insert: Record<string, never>;
-      Update: Record<string, never>;
       Relationships: [
         {
           foreignKeyName: "";
@@ -177,13 +176,9 @@ interface ApiSchema {
     };
     provider: {
       Row: ProviderRow;
-      Insert: Record<string, never>;
-      Update: Record<string, never>;
     };
     deviation_title: {
       Row: { title: string; layer_id: number; dataset_id: number; municipality_code: string; count: number };
-      Insert: Record<string, never>;
-      Update: Record<string, never>;
       Relationships: [
         {
           foreignKeyName: "municipality_layer_dataset_id_fkey";
@@ -210,6 +205,9 @@ interface ApiSchema {
           referencedColumns: ["code"];
         },
       ];
+    };
+    upstream_item: {
+      Row: UpstreamItemRow;
     };
   };
   Functions: Record<string, never>;

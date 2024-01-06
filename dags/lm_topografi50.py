@@ -242,12 +242,12 @@ for view_name, dataset_name, name in [
     (
         "anlaggningsomradespunkt_topo50",
         "anlaggningsomrade/anlaggningsomradespunkt",
-        "Omräkning av avvikelser från anläggningsområden",
+        "Omräkning av avvikelser från anläggningsområdespunkter",
     ),
     (
         "anlaggningsomrade_topo50",
         "anlaggningsomrade/anlaggningsomrade",
-        "Omräkning av avvikelser från anläggningsområdespunkter",
+        "Omräkning av avvikelser från anläggningsområden",
     ),
     (
         "byggnadsanlaggningspunkt_topo50",

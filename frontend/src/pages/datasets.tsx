@@ -4,6 +4,7 @@ import { useSuspenseQueries } from "@tanstack/react-query";
 import { ActionIcon, Anchor, Box, Group, MultiSelect, Table, TextInput } from "@mantine/core";
 import { Link } from "wouter";
 import { IconBug, IconExternalLink, IconMap } from "@tabler/icons-react";
+import _ from "lodash";
 
 const Page: FC = () => {
   const [{ data: datasets }, { data: providers }] = useSuspenseQueries({
@@ -49,7 +50,7 @@ const Page: FC = () => {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {filteredDatasets.map((d) => (
+          {_.sortBy(filteredDatasets, "provider.name", "name").map((d) => (
             <Table.Tr key={d.id}>
               <Table.Td>{d.provider?.name}</Table.Td>
               <Table.Td>

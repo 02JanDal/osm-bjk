@@ -22,7 +22,7 @@ WITH gavle AS (
 	WHERE item.dataset_id = 140 AND item.original_attributes->>'andamal' = 'Kriminalvårdsanstalt' AND element.id IS NULL
 	UNION ALL
 	SELECT item.*, jsonb_build_object('landuse', 'quarry'), item.original_attributes->>'andamal' as title FROM upstream.item
-	LEFT OUTER JOIN osm.element ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags ? 'emergency' AND element.tags->>'landuse' = 'quarry'
+	LEFT OUTER JOIN osm.element ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags ? 'landuse' AND element.tags->>'landuse' = 'quarry'
 	WHERE item.dataset_id = 140 AND item.original_attributes->>'andamal' = 'Täkt' AND element.id IS NULL
 	UNION ALL
 -- TODO: how should these be tagged?

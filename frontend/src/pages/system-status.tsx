@@ -137,8 +137,8 @@ const ProcessRow: FC<{ dag: DAG }> = ({ dag }) => {
   const { latest } = useDAGStatus(dag);
 
   return (
-    <Group justify="space-between" gap="xs">
-      <Group gap="xs">
+    <Group justify="space-between" gap="xs" style={{ flexWrap: "nowrap" }}>
+      <Group gap="xs" style={{ flexWrap: "nowrap" }}>
         <DAGIcon dag={dag} latest={latest} size="sm" icon={IconBug} triggerable={true} />
         <Text fz="sm" c="dimmed">
           {dag.tags.find((t) => t.name.startsWith("name:"))?.name.replace("name:", "") ?? "Omräkning av avvikelser"}
@@ -192,7 +192,7 @@ const ProcessCard: FC<{ dag: DAG; title: string; description: string; children?:
 
   return (
     <Card withBorder padding="lg" radius="md" h="100%">
-      <Stack gap={0} justify="space-between" h="100%">
+      <Stack gap={0} justify="space-between" h="100%" mb="sm">
         <Stack gap={0}>
           <Group justify="space-between">
             <DAGIcon dag={dag} latest={latest} size="lg" icon={IconDownload} triggerable={triggerable} />
@@ -249,7 +249,7 @@ const ProcessCard: FC<{ dag: DAG; title: string; description: string; children?:
         )}
       </Stack>
       {children?.map((c) => (
-        <Card.Section withBorder mt="sm" key={c.dag_id} p="xs">
+        <Card.Section withBorder key={c.dag_id} p="xs">
           <ProcessRow dag={c} />
         </Card.Section>
       ))}

@@ -1,7 +1,7 @@
 import { FC } from "react";
-import postgrest, { DeviationRow } from "../postgrest.ts";
-import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { Anchor, Button, Grid, Loader, Table, Tooltip } from "@mantine/core";
+import postgrest, { DatasetRow, DeviationRow, ProviderRow } from "../postgrest.ts";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Alert, Anchor, Button, Grid, Loader, Table, Text, Tooltip, Flex } from "@mantine/core";
 import { Link } from "wouter";
 import { actualElementId, actualElementType, getElement } from "../lib/osm.ts";
 import { RFeature, RLayerVector, RMap, ROSM, RPopup, RStyle } from "rlayers";
@@ -15,6 +15,7 @@ import { LineString } from "ol/geom";
 import Markdown from "react-markdown";
 import { addNode, loadAndZoom } from "../lib/josm.ts";
 import { fromExtent } from "ol/geom/Polygon";
+import { IconArrowBack, IconExclamationCircle } from "@tabler/icons-react";
 
 const TagKeyLink: FC<{ keyString: string }> = (props) => (
   <Anchor href={`https://wiki.openstreetmap.org/wiki/Key:${props.keyString}`} target="_blank">
@@ -44,24 +45,44 @@ const TagValueLink: FC<{ keyString: string; value: string }> = (props) => (
 
 const geojson = new GeoJSON();
 
-const Page: FC<{ params: { id: string } }> = ({ params }) => {
-  const id = parseInt(params.id);
+const Page: FC<{
+  deviation: {
+    id: number;
+    dataset_id: number;
+    layer_id: number;
+    upstream_item_id: number;
+    suggested_geom: object;
+    osm_element_id: number;
+    osm_element_type: "w" | "a" | "n" | "r";
 
-  const { data: deviationData } = useSuspenseQuery({
-    queryKey: ["deviation", id],
-    queryFn: async () =>
-      await postgrest
-        .from("deviation")
-        .select(
-          "*,osm_geom,upstream_item(*),dataset(id,name,provider(name),url,license,fetched_at),layer(id,name,description),nearby(id,title,center)",
-        )
-        .eq("id", id)
-        .single()
-        .throwOnError(),
-  });
+    suggested_tags: Record<string, string | null>;
+    title: string;
+    description: string;
+    center: object;
+    municipality_code: string;
+    action?: "fixed" | "already-fixed" | "not-an-issue" | "deferred";
+    action_at?: string;
+    note: string;
 
-  const deviation = deviationData.data!;
-
+    osm_geom?: object;
+    upstream_item: {
+      id: number;
+      dataset_id: number;
+      url?: string;
+      original_id?: string;
+      geometry: object;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      original_attributes: Record<string, any>;
+      updated_at?: string;
+    }[];
+    dataset:
+      | (Pick<DatasetRow, "id" | "name" | "url" | "license" | "fetched_at"> & {
+          provider: Pick<ProviderRow, "name"> | null;
+        })
+      | null;
+    nearby: Pick<DeviationRow, "id" | "title" | "center">[];
+  };
+}> = ({ deviation }) => {
   const [osm_element_type, osm_element_id] = deviation
     ? [deviation.osm_element_type, deviation.osm_element_id]
     : [null, null];
@@ -509,4 +530,61 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
     </Grid>
   );
 };
-export default Page;
+const PageOuter: FC<{ params: { id: string } }> = ({ params }) => {
+  const id = parseInt(params.id);
+
+  const { data, status, error, refetch } = useQuery({
+    queryKey: ["deviation", id],
+    queryFn: async () =>
+      await postgrest
+        .from("deviation")
+        .select(
+          "*,osm_geom,upstream_item(*),dataset(id,name,provider(name),url,license,fetched_at),layer(id,name,description),nearby(id,title,center)",
+        )
+        .eq("id", id)
+        .single()
+        .throwOnError(),
+    retry: (failureCount, error) => {
+      if ("code" in error && error.code === "PGRST116") {
+        return false;
+      }
+      return failureCount < 3;
+    },
+  });
+
+  if (status === "pending") {
+    return (
+      <Flex align="center" justify="center" w="100%">
+        <Loader size="xl" type="dots" />
+      </Flex>
+    );
+  } else if (status === "error") {
+    if ("code" in error && error.code === "PGRST116") {
+      return (
+        <Flex align="center" justify="center" w="100%">
+          <div>
+            <Text fz="lg" fw="bold">
+              Kunde inte hitta avvikelse
+            </Text>
+            <Text mt="md">Detta beror troligen på att den inte längre är relevant</Text>
+            <Button onClick={() => history.back()} leftSection={<IconArrowBack size={14} />} variant="subtle" mt="xl">
+              Gå tillbaka
+            </Button>
+          </div>
+        </Flex>
+      );
+    }
+    return (
+      <Alert variant="filled" color="red" icon={<IconExclamationCircle />} w="100%">
+        <p style={{ marginTop: 0 }}>{"message" in error ? error.message : "Något gick fel"}</p>
+        <Button onClick={() => refetch()} color="red" variant="white">
+          Försök igen
+        </Button>
+      </Alert>
+    );
+  } else {
+    return <Page deviation={data.data!} />;
+  }
+};
+
+export default PageOuter;

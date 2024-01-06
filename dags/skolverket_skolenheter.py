@@ -22,7 +22,7 @@ def get(session: Session, url: str) -> Response:
 with DAG(
     "skolverket-skolenheter",
     description="Fetches schools from Skolverket",
-    schedule_interval=None,
+    schedule_interval=timedelta(days=7),
     start_date=datetime(2023, 9, 16, 21, 30),
     catchup=False,
     max_active_runs=1,

@@ -238,12 +238,32 @@ with DAG(
             start_t >> op_update
 
 
-for view_name, dataset_name in [
-    ("anlaggningsomradespunkt_topo50", "anlaggningsomrade/anlaggningsomradespunkt"),
-    ("anlaggningsomrade_topo50", "anlaggningsomrade/anlaggningsomrade"),
-    ("byggnadsanlaggningspunkt_topo50", "byggnadsverk/byggnadsanlaggningspunkt"),
-    ("transformatoromradespunkt_topo50", "ledningar/transformatoromradespunkt"),
-    ("transformatoromrade_topo50", "ledningar/transformatoromrade"),
+for view_name, dataset_name, name in [
+    (
+        "anlaggningsomradespunkt_topo50",
+        "anlaggningsomrade/anlaggningsomradespunkt",
+        "Omräkning av avvikelser från anläggningsområden",
+    ),
+    (
+        "anlaggningsomrade_topo50",
+        "anlaggningsomrade/anlaggningsomrade",
+        "Omräkning av avvikelser från anläggningsområdespunkter",
+    ),
+    (
+        "byggnadsanlaggningspunkt_topo50",
+        "byggnadsverk/byggnadsanlaggningspunkt",
+        "Omräkning av avvikelser från byggnadsanläggningspunkter",
+    ),
+    (
+        "transformatoromradespunkt_topo50",
+        "ledningar/transformatoromradespunkt",
+        "Omräkning av avvikelser från transformatorområdespunkter",
+    ),
+    (
+        "transformatoromrade_topo50",
+        "ledningar/transformatoromrade",
+        "Omräkning av avvikelser från transformatorområden",
+    ),
 ]:
     with DAG(
         f"deviations-{view_name}",
@@ -260,7 +280,7 @@ for view_name, dataset_name in [
             retries=1,
             retry_delay=timedelta(minutes=5),
         ),
-        tags=["provider:Lantmäteriet", "type:Deviations"],
+        tags=["provider:Lantmäteriet", "type:Deviations", f"name:{name}"],
     ):
         SQLExecuteQueryOperator(
             task_id="deviations",

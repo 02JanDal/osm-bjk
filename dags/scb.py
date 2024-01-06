@@ -12,7 +12,7 @@ from osm_bjk.licenses import CC0_1_0
 with DAG(
     "scb-forskolor",
     description="Hämtar förskolor från SCB",
-    schedule_interval=None,
+    schedule_interval=timedelta(days=28),
     start_date=datetime(2023, 9, 16, 21, 30),
     catchup=False,
     max_active_runs=1,
@@ -52,7 +52,7 @@ with DAG(
 with DAG(
     "scb-myndighetskontor",
     description=f"Hämtar Myndighets- och kommunkontor från SCB",
-    schedule_interval=None,
+    schedule_interval=timedelta(days=28),
     start_date=datetime(2023, 9, 16, 21, 30),
     catchup=False,
     max_active_runs=1,

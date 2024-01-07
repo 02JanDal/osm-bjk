@@ -31,7 +31,7 @@ spec:
     - host: osm.jandal.se
       http:
         paths:
-          - path: /api(?!/rpc/gpx)(?!/rpc/osmchange)(?!/airflow)(/|$)(.*)
+          - path: /api(?!/rpc/gpx)(?!/rpc/osmchange)(?!/rpc/josmchange)(?!/airflow)(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
               service:
@@ -70,7 +70,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   namespace: osm
-  name: postgrest-gpx
+  name: postgrest-osmchange
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /rpc/osmchange
     nginx.ingress.kubernetes.io/configuration-snippet: |
@@ -86,6 +86,33 @@ spec:
       http:
         paths:
           - path: /api/rpc/osmchange
+            pathType: Prefix
+            backend:
+              service:
+                name: postgrest
+                port:
+                  name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: osm
+  name: postgrest-josmchange
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /rpc/josmchange
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Accept "text/xml";
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - osm.jandal.se
+      secretName: osm-jandal-tls
+  rules:
+    - host: osm.jandal.se
+      http:
+        paths:
+          - path: /api/rpc/josmchange
             pathType: Prefix
             backend:
               service:

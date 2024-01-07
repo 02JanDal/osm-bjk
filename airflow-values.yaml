@@ -329,6 +329,8 @@ extraEnv: |
     value: postgresql://$(PGUSER):$(PGPASSWORD)@db-r/app
   - name: AIRFLOW__API__AUTH_BACKENDS
     value: airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
+  - name: AIRFLOW__API__MAXIMUM_PAGE_LIMIT
+    value: "500"
 # eg:
 # extraEnv: |
 #   - name: AIRFLOW__CORE__LOAD_EXAMPLES

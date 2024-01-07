@@ -262,11 +262,11 @@ const Page: FC = () => {
     queries: [
       {
         queryKey: ["airflow", "dags"],
-        queryFn: () => getDAGs({ onlyActive: true }),
+        queryFn: () => getDAGs({ onlyActive: true, limit: 500 }),
       },
       {
         queryKey: ["airflow", "datasets"],
-        queryFn: () => getDatasets({}),
+        queryFn: () => getDatasets({ limit: 500 }),
       },
     ],
   });

@@ -196,7 +196,7 @@ const Page: FC<{
           <Button
             fullWidth
             loading={isPerformingAction && variables === "fixed"}
-            disabled={isPerformingAction}
+            disabled={isPerformingAction || true}
             onClick={() => performAction("fixed")}
             data-disabled={true}
           >
@@ -206,7 +206,7 @@ const Page: FC<{
             <Button
               fullWidth
               loading={isPerformingAction && variables === "already-fixed"}
-              disabled={isPerformingAction}
+              disabled={isPerformingAction || true}
               onClick={() => performAction("already-fixed")}
               data-disabled={true}
             >
@@ -223,7 +223,7 @@ const Page: FC<{
             <Button
               fullWidth
               loading={isPerformingAction && variables === "not-an-issue"}
-              disabled={isPerformingAction}
+              disabled={isPerformingAction || true}
               onClick={() => performAction("not-an-issue")}
               data-disabled={true}
             >
@@ -238,7 +238,7 @@ const Page: FC<{
             <Button
               fullWidth
               loading={isPerformingAction && variables === "deferred"}
-              disabled={isPerformingAction}
+              disabled={isPerformingAction || true}
               onClick={() => performAction("deferred")}
               data-disabled={true}
             >

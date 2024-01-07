@@ -259,9 +259,10 @@ const Page: FC = () => {
             {_.sortBy(Object.entries(colors), ([title, _]) => title)
               .filter(([title, _]) => deviationTitles.some((dt) => dt.title === title))
               .map(([title, [ca, cb]]) => (
-                <Group key={title} style={{ flexWrap: "nowrap" }}>
+                <Group key={title} style={{ flexWrap: "nowrap" }} gap="xs">
                   <Box w={15} h={15} bg={cb} style={{ border: `2px solid ${ca}`, borderRadius: "100%" }} />
                   <div style={{ overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{title}</div>
+                  <div>({deviationTitles.filter((dt) => dt.title === title).reduce((a, b) => a + b.count, 0)})</div>
                 </Group>
               ))}
           </Stack>

@@ -152,7 +152,7 @@ const Page: FC = () => {
     if (query.deviation?.length) {
       search.set("titles", `{${query.deviation.join(",")}}`);
     }
-    return `https://osm.jandal.se/api/rpc/osmchange?${search.toString()}`;
+    return `https://osm.jandal.se/api/rpc/josmchange?${search.toString()}`;
   }, [query]);
 
   return (

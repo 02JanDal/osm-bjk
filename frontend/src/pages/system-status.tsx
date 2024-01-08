@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient, useSuspenseQueries } from "@tans
 import { DAG, DAGRun, getDAGRuns, getDAGs, getDatasets, triggerDAGRun } from "../lib/airflow.ts";
 import { differenceInMilliseconds } from "date-fns";
 import { sleep } from "../lib/util.ts";
+import { notifications } from "@mantine/notifications";
 
 function useDAGStatus(dag: DAG) {
   const dagRun = useQuery({
@@ -105,9 +106,36 @@ const DAGIcon: FC<{ dag: DAG; latest: DAGRun | undefined; size: MantineSize; ico
 }) => {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (dag: DAG) => triggerDAGRun(dag.dag_id, { note: "Triggered by user on osm-bjk.jandal.se" }),
-    onSuccess: async (_, d) => {
+    mutationFn: async (dag: DAG) => {
+      await triggerDAGRun(dag.dag_id, { note: "Triggered by user on osm-bjk.jandal.se" });
+    },
+    onMutate: (d) => {
+      return notifications.show({
+        title: "Köar process...",
+        message: `Köar processen ${d.dag_id}...`,
+        loading: true,
+        autoClose: false,
+        withCloseButton: false,
+      });
+    },
+    onSuccess: async (_, d, notification) => {
+      notifications.update({
+        id: notification,
+        title: "Process köad",
+        message: `Processen ${d.dag_id} har köats och kommer startas inom kort`,
+        autoClose: 5000,
+        color: "green",
+        loading: false,
+      });
       await queryClient.invalidateQueries({ queryKey: ["airflow", "dags", d.dag_id, "runs"] });
+    },
+    onError: (_, d, notification) => {
+      notifications.update({
+        id: notification,
+        title: "Något gick fel",
+        message: `Kunde inte köa proccessen ${d.dag_id}, försök igen senare`,
+        color: "red",
+      });
     },
   });
 

@@ -48,6 +48,11 @@ export type ProviderRow = {
   name: string;
   url: string;
 };
+export type ReportInsertRow = {
+  deviation_id: number;
+  contact?: string;
+  description: string;
+};
 
 export type DeviationRow = {
   id: number;
@@ -83,6 +88,11 @@ export type UpstreamItemRow = {
 
 interface ApiSchema {
   Tables: {
+    report: {
+      Row: Record<string, never>;
+      Insert: ReportInsertRow;
+      Update: Record<string, never>;
+    };
     municipality: {
       Row: MunicipalityRow;
       Insert: Record<string, never>;

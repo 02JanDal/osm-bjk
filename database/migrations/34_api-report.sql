@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS api.report (
+    id BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY,
+	deviation_id BIGINT NOT NULL REFERENCES api.deviation(id) ON DELETE CASCADE,
+	contact TEXT,
+	description TEXT NOT NULL CHECK(LENGTH(description) > 5)
+);
+
+GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE api.report TO app;
+GRANT INSERT ON TABLE api.report TO web_anon;
+GRANT INSERT ON TABLE api.report TO web_auth;

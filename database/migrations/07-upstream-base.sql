@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS upstream.provider (
 CREATE TABLE IF NOT EXISTS upstream.dataset (
     id BIGINT NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     name TEXT NOT NULL,
+    short_name TEXT NOT NULL,
     provider_id BIGINT NOT NULL REFERENCES upstream.provider(id) ON DELETE RESTRICT,
     url TEXT NOT NULL,
     license TEXT NOT NULL,
@@ -40,3 +41,15 @@ BEGIN
 END
 $$;
 CREATE OR REPLACE TRIGGER t_add_item_partition AFTER INSERT ON upstream.dataset FOR EACH ROW EXECUTE FUNCTION upstream.t_add_item_partition();
+
+CREATE OR REPLACE FUNCTION api.t_dataset_short_name() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NEW.short_name IS NULL THEN
+     	NEW.short_name := NEW.name;
+    END IF;
+	RETURN NEW;
+END;
+$$;
+CREATE OR REPLACE TRIGGER t_dataset_short_name BEFORE INSERT ON upstream.dataset FOR EACH ROW EXECUTE FUNCTION api.t_dataset_short_name();

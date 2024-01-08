@@ -26,7 +26,7 @@ const MunicipalityLayer: FC<{
   layer: LayerRow;
   datasets: {
     dataset:
-      | (Omit<DatasetRow, "provider_id" | "url" | "license" | "fetched_at"> & {
+      | (Omit<DatasetRow, "provider_id" | "url" | "license" | "fetched_at" | "short_name"> & {
           provider: Pick<ProviderRow, "name"> | null;
         })
       | null;

@@ -114,6 +114,16 @@ END;
 $$;
 CREATE OR REPLACE TRIGGER t_deviation_action BEFORE UPDATE OF action ON api.deviation FOR EACH ROW EXECUTE FUNCTION osm.t_deviation_action();
 
+CREATE OR REPLACE FUNCTION upstream.t_item_delete_deviation() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+	DELETE FROM api.deviation WHERE ARRAY[OLD.id] && upstream_item_ids;
+    RETURN NULL;
+END
+$$;
+CREATE OR REPLACE TRIGGER t_item_delete_deviation AFTER INSERT ON upstream.item FOR EACH ROW EXECUTE FUNCTION upstream.t_item_delete_deviation();
+
 -- endregion
 
 -- region Indices
@@ -124,6 +134,7 @@ CREATE INDEX IF NOT EXISTS deviation_municipality_code_idx ON api.deviation USIN
 CREATE INDEX IF NOT EXISTS deviation_osm_item_type_osm_item_id_idx ON api.deviation USING btree (osm_element_type, osm_element_id);
 CREATE INDEX IF NOT EXISTS deviation_suggested_geom_idx ON api.deviation USING gist (suggested_geom);
 CREATE INDEX IF NOT EXISTS deviation_title_idx ON api.deviation USING btree (title);
+CREATE INDEX deviation_upstream_item_ids_idx ON api.deviation USING gin (upstream_item_ids);
 
 -- endregion
 

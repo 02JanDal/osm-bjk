@@ -36,11 +36,12 @@ export type LayerRow = {
 export type DatasetRow = {
   id: number;
   name: string;
+  short_name: string;
   provider_id: number;
   url: string;
   license: string;
   extent?: object;
-  fetched_at: string;
+  fetched_at?: string;
 };
 export type ProviderRow = {
   id: number;

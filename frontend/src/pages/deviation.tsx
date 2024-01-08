@@ -1,7 +1,7 @@
 import { FC } from "react";
 import postgrest, { DatasetRow, DeviationRow, ProviderRow } from "../postgrest.ts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, Anchor, Button, Grid, Loader, Table, Text, Tooltip, Flex, Group } from "@mantine/core";
+import { Alert, Anchor, Button, Grid, Loader, Table, Text, Tooltip, Flex, Group, Modal } from "@mantine/core";
 import { Link } from "wouter";
 import { actualElementId, actualElementType, getElement } from "../lib/osm.ts";
 import { RFeature, RLayerVector, RMap, ROSM, RPopup, RStyle } from "rlayers";
@@ -16,6 +16,7 @@ import Markdown from "react-markdown";
 import { addNode, loadAndZoom } from "../lib/josm.ts";
 import { fromExtent } from "ol/geom/Polygon";
 import { IconArrowBack, IconExclamationCircle } from "@tabler/icons-react";
+import { useDisclosure } from "@mantine/hooks";
 
 const TagKeyLink: FC<{ keyString: string }> = (props) => (
   <Anchor href={`https://wiki.openstreetmap.org/wiki/Key:${props.keyString}`} target="_blank">
@@ -66,7 +67,7 @@ const Page: FC<{
 
     osm_geom?: object;
     dataset:
-      | (Pick<DatasetRow, "id" | "name" | "url" | "license" | "fetched_at"> & {
+      | (Pick<DatasetRow, "id" | "name" | "short_name" | "url" | "license" | "fetched_at"> & {
           provider: Pick<ProviderRow, "name"> | null;
         })
       | null;
@@ -120,6 +121,8 @@ const Page: FC<{
   const extent = geom.clone().transform("EPSG:3006", "EPSG:3857").getExtent();
   const center4326 = getCenter(geom.transform("EPSG:3006", "EPSG:4326").getExtent());
 
+  const [josmInfoOpened, { open: josmInfoOpen, close: josmInfoClose }] = useDisclosure(false);
+
   return (
     <Grid grow w="100%" styles={{ inner: { height: "100%" } }}>
       <Grid.Col span={{ base: 12, sm: 6, md: 5, xl: 3 }} style={{ maxWidth: "var(--col-flex-basis)" }}>
@@ -133,7 +136,7 @@ const Page: FC<{
             fullWidth
             component="a"
             href={makeLink({
-              source: `${deviation.dataset!.provider!.name} ${deviation.dataset!.name}`,
+              source: `${deviation.dataset!.provider!.name} ${deviation.dataset!.short_name}`,
               hashtags: ["bastajavlakartan"],
               comment: deviation.title,
               id: deviation.osm_element_id
@@ -154,6 +157,7 @@ const Page: FC<{
           <Button
             fullWidth
             onClick={() => {
+              josmInfoOpen();
               const josmExtent = fromExtent(buffer(geom.getExtent(), 500))
                 .transform("EPSG:3006", "EPSG:4326")
                 .getExtent();
@@ -172,13 +176,13 @@ const Page: FC<{
                       ]
                     : undefined,
                   addTags: deviation.osm_element_id ? deviation.suggested_tags : undefined,
-                  changesetSource: `${deviation.dataset!.provider!.name} ${deviation.dataset!.name}`,
+                  changesetSource: `${deviation.dataset!.provider!.name} ${deviation.dataset!.short_name}`,
                   changesetHashtags: ["bastajavlakartan"],
                   changesetComment: deviation.title,
                 },
                 () => {
                   const suggested = geojson.readGeometry(deviation.suggested_geom);
-                  if (suggested.getType() === "Point") {
+                  if (suggested.getType() === "Point" && !deviation.osm_element_id) {
                     const center = getCenter(suggested.transform("EPSG:3006", "EPSG:4326").getExtent());
                     setTimeout(
                       () => addNode(center[1], center[0], deviation.suggested_tags as Record<string, string>),
@@ -191,6 +195,14 @@ const Page: FC<{
           >
             Öppna i JOSM
           </Button>
+          <Modal opened={josmInfoOpened} onClose={josmInfoClose} title="Arbeta i JOSM" centered>
+            <p>Avvikelsen öppnas nu i JOSM. Kom ihåg att ange datakälla och gärna även hashtag:</p>
+            <code>
+              source={deviation.dataset!.provider!.name} {deviation.dataset!.short_name}
+              <br />
+              hashtags=#bastajavlakartan
+            </code>
+          </Modal>
         </Button.Group>
         <Button.Group w="100%" mt={10}>
           <Button
@@ -358,12 +370,14 @@ const Page: FC<{
                 </Link>
               </Table.Td>
             </Table.Tr>
-            <Table.Tr>
-              <Table.Th>Senaste hämtning från källa:</Table.Th>
-              <Table.Td>
-                <TimeAgo date={deviation.dataset!.fetched_at} />
-              </Table.Td>
-            </Table.Tr>
+            {deviation.dataset!.fetched_at ? (
+              <Table.Tr>
+                <Table.Th>Senaste hämtning från källa:</Table.Th>
+                <Table.Td>
+                  <TimeAgo date={deviation.dataset!.fetched_at} />
+                </Table.Td>
+              </Table.Tr>
+            ) : null}
             {status === "success" ? (
               <>
                 {upstreamData?.data?.upstream_item.some((i) => i.updated_at) ? (
@@ -554,7 +568,7 @@ const PageOuter: FC<{ params: { id: string } }> = ({ params }) => {
       await postgrest
         .from("deviation")
         .select(
-          "*,osm_geom,dataset(id,name,provider(name),url,license,fetched_at),layer(id,name,description),nearby(id,title,center)",
+          "*,osm_geom,dataset(id,name,short_name,provider(name),url,license,fetched_at),layer(id,name,description),nearby(id,title,center)",
         )
         .eq("id", id)
         .single()

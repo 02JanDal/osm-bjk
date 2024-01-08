@@ -1,6 +1,6 @@
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrayParam, useQueryParams } from "use-query-params";
-import { Button, Grid, Group, MultiSelect, Stack, Switch, Title } from "@mantine/core";
+import { Button, Grid, Group, Modal, MultiSelect, Stack, Switch, Title } from "@mantine/core";
 import { useQuery, useSuspenseQueries } from "@tanstack/react-query";
 import postgrest, { MunicipalityRow } from "../postgrest";
 import _ from "lodash";
@@ -12,7 +12,7 @@ import { Link, useLocation } from "wouter";
 import { Feature, Overlay } from "ol";
 import { importUrl } from "../lib/josm.ts";
 import { swedenExtent, swedenInitial } from "../lib/map.ts";
-import { useLocalStorage, useSessionStorage } from "@mantine/hooks";
+import { useLocalStorage, useSessionStorage, useDisclosure } from "@mantine/hooks";
 import { Box } from "@mantine/core";
 import { Coordinate } from "ol/coordinate";
 
@@ -138,22 +138,27 @@ const Page: FC = () => {
   const popupElementRef = useRef<HTMLDivElement>(null);
   const [selectedFeatures, setSelectedFeatures] = useState<Feature[]>([]);
 
-  const osmChangeUrl = useMemo(() => {
-    const search = new URLSearchParams();
-    if (query.municipality?.length) {
-      search.set("municipalities", `{${query.municipality.join(",")}}`);
-    }
-    if (query.dataset?.length) {
-      search.set("dataset_ids", `{${query.dataset.join(",")}}`);
-    }
-    if (query.layer?.length) {
-      search.set("layer_ids", `{${query.layer.join(",")}}`);
-    }
-    if (query.deviation?.length) {
-      search.set("titles", `{${query.deviation.join(",")}}`);
-    }
-    return `https://osm.jandal.se/api/rpc/josmchange?${search.toString()}`;
-  }, [query]);
+  const osmChangeUrl = useCallback(
+    (josm: boolean) => {
+      const search = new URLSearchParams();
+      if (query.municipality?.length) {
+        search.set("municipalities", `{${query.municipality.join(",")}}`);
+      }
+      if (query.dataset?.length) {
+        search.set("dataset_ids", `{${query.dataset.join(",")}}`);
+      }
+      if (query.layer?.length) {
+        search.set("layer_ids", `{${query.layer.join(",")}}`);
+      }
+      if (query.deviation?.length) {
+        search.set("titles", `{${query.deviation.join(",")}}`);
+      }
+      return `https://osm.jandal.se/api/rpc/${josm ? "josmchange" : "osmchange"}?${search.toString()}`;
+    },
+    [query],
+  );
+
+  const [infoOpened, { open: infoOpen, close: infoClose }] = useDisclosure(false);
 
   return (
     <Grid grow w="100%" styles={{ inner: { height: "100%" } }}>
@@ -235,13 +240,14 @@ const Page: FC = () => {
             Hittade {countResults} avvikelser
           </p>
           <Button.Group orientation="vertical">
-            <Button variant="light" component="a" href={osmChangeUrl}>
+            <Button variant="light" component="a" href={osmChangeUrl(false)} onClick={infoOpen}>
               Hämta osmChange
             </Button>
             <Button
               variant="light"
               onClick={() => {
-                importUrl(osmChangeUrl, {
+                infoOpen();
+                importUrl(osmChangeUrl(true), {
                   changesetTags: {
                     hashtags: "#bastajavlakartan",
                   },
@@ -250,6 +256,30 @@ const Page: FC = () => {
             >
               Öppna alla i JOSM
             </Button>
+            <Modal opened={infoOpened} onClose={infoClose} title="Jobba med avvikelser" centered>
+              <p>Kom ihåg att ange datakälla/-or och gärna även hashtag:</p>
+              <code>
+                source=
+                {_.uniq(
+                  deviationTitles
+                    .map(({ dataset_id }) => datasets.data!.find((d) => d.id === dataset_id)!)
+                    .map((dataset) => `${dataset.provider!.name} ${dataset.short_name}`),
+                )
+                  .sort()
+                  .join(",")}
+                <br />
+                hashtags=#bastajavlakartan
+              </code>
+
+              <p>
+                Kom ihåg att inte alla datakällor är tillförlitliga, även om den kan tillhandahållas från en i övrigt
+                officiell och tillförlitlig organisation som en myndighet.
+              </p>
+              <p>
+                Denna sida tar inget ansvar för korrektheten på det data som visas här. Fundera alltid på om det som
+                anges är rimligt och stämmer med t.ex. flygfoton. Ändra inget i OSM om du är osäker.
+              </p>
+            </Modal>
           </Button.Group>
           <hr
             style={{ margin: 0, border: "none", borderBottom: "1px solid var(--mantine-color-gray-4)", width: "100%" }}

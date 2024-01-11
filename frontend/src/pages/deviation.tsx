@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, useMemo } from "react";
 import postgrest, { DatasetRow, DeviationRow, ProviderRow, ReportInsertRow } from "../postgrest.ts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -15,6 +15,7 @@ import {
   Modal,
   TextInput,
   Textarea,
+  ActionIcon,
 } from "@mantine/core";
 import { Link } from "wouter";
 import { actualElementId, actualElementType, getElement } from "../lib/osm.ts";
@@ -29,10 +30,12 @@ import { LineString } from "ol/geom";
 import Markdown from "react-markdown";
 import { addNode, loadAndZoom } from "../lib/josm.ts";
 import { fromExtent } from "ol/geom/Polygon";
-import { IconArrowBack, IconExclamationCircle } from "@tabler/icons-react";
+import { IconArrowBack, IconBug, IconExclamationCircle } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
+import { getDAGs } from "../lib/airflow.ts";
+import { useDAGStatus, useTriggerDAG } from "../hooks/dags.tsx";
 
 const TagKeyLink: FC<{ keyString: string }> = (props) => (
   <Anchor href={`https://wiki.openstreetmap.org/wiki/Key:${props.keyString}`} target="_blank">
@@ -62,6 +65,104 @@ const TagValueLink: FC<{ keyString: string; value: string }> = (props) => (
 
 const geojson = new GeoJSON();
 
+const ReportButton: FC<{ deviationId: number }> = ({ deviationId }) => {
+  const [reportOpened, { open, close }] = useDisclosure(false);
+  const reportForm = useForm({
+    initialValues: {
+      contact: "",
+      description: "",
+    },
+    validate: {
+      description: (value) => (value.length > 5 ? null : "Måste vara längre än 5 täcken"),
+    },
+  });
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: async (report: ReportInsertRow) => await postgrest.from("report").insert(report).throwOnError(),
+    onMutate: () => {
+      return notifications.show({
+        title: "Skickar rapport...",
+        message: "Skickar in din rapport...",
+        autoClose: false,
+        withCloseButton: false,
+        loading: true,
+      });
+    },
+    onSuccess: (_1, _2, notification) => {
+      notifications.update({
+        id: notification,
+        title: "Rapport skickad",
+        message: "Din rapport har skickats och kommer tittas på inom kort!",
+        color: "green",
+        autoClose: 5000,
+        withCloseButton: true,
+        loading: false,
+      });
+    },
+    onError: (_1, _2, notification) => {
+      notifications.update({
+        id: notification,
+        title: "Något gick fel",
+        message: "Din rapport kunde inte skickas, prova igen senare",
+        color: "red",
+        autoClose: false,
+        withCloseButton: false,
+        loading: false,
+      });
+    },
+  });
+  return (
+    <>
+      <Button
+        fullWidth
+        loading={isPending}
+        disabled={isPending}
+        onClick={open}
+        mt="xs"
+        color="red"
+        variant="light"
+        size="compact-xs"
+      >
+        Rapportera felaktig avvikelse
+      </Button>
+      <Modal opened={reportOpened} onClose={close} centered title="Rapportera felaktig avvikelse">
+        <form
+          onSubmit={reportForm.onSubmit((values) => {
+            close();
+            mutate({ ...values, deviation_id: deviationId });
+            reportForm.reset();
+          })}
+        >
+          <p>
+            Beräkningen av avvikelser är ofta komplex och kan ibland gå fel. Och ibland (oftare än man skulle önska) så
+            är det underliggande datat faktiskt fel.
+          </p>
+          <p>
+            Använd detta formulär om du hittat en avvikelse som du anser vara fel på något vis, så tittar jag om det
+            behöver justeras något i systemet.
+          </p>
+          <Textarea
+            label="Beskrivning"
+            description="Beskriv vad du anser vara fel med denna avvikelse, ange gärna t.ex. länkar till relevanta källor"
+            withAsterisk
+            {...reportForm.getInputProps("description")}
+            mt="md"
+          />
+          <TextInput
+            label="Kontaktuppgifter"
+            placeholder="@Anvandare eller din@mail.se"
+            description="Ange ditt användarnamn på OSM-forumet eller din mailadress om du vill få återkoppling på din rapport"
+            {...reportForm.getInputProps("contact")}
+          />
+          <Group justify="flex-end" mt="md">
+            <Button type="submit">Skicka</Button>
+          </Group>
+        </form>
+      </Modal>
+    </>
+  );
+};
+
 const Page: FC<{
   deviation: {
     id: number;
@@ -83,7 +184,7 @@ const Page: FC<{
 
     osm_geom?: object;
     dataset:
-      | (Pick<DatasetRow, "id" | "name" | "short_name" | "url" | "license" | "fetched_at"> & {
+      | (Pick<DatasetRow, "id" | "name" | "short_name" | "url" | "license" | "fetched_at" | "view_name"> & {
           provider: Pick<ProviderRow, "name"> | null;
         })
       | null;
@@ -122,40 +223,6 @@ const Page: FC<{
       queryClient.invalidateQueries({ queryKey: ["osm-element"] });
     },
   });
-  const { mutate: report, isPending: isReporting } = useMutation({
-    mutationFn: async (report: ReportInsertRow) => await postgrest.from("report").insert(report).throwOnError(),
-    onMutate: () => {
-      return notifications.show({
-        title: "Skickar rapport...",
-        message: "Skickar in din rapport...",
-        autoClose: false,
-        withCloseButton: false,
-        loading: true,
-      });
-    },
-    onSuccess: (_1, _2, notification) => {
-      notifications.update({
-        id: notification,
-        title: "Rapport skickad",
-        message: "Din rapport har skickats och kommer tittas på inom kort!",
-        color: "green",
-        autoClose: 5000,
-        withCloseButton: true,
-        loading: false,
-      });
-    },
-    onError: (_1, _2, notification) => {
-      notifications.update({
-        id: notification,
-        title: "Något gick fel",
-        message: "Din rapport kunde inte skickas, prova igen senare",
-        color: "red",
-        autoClose: false,
-        withCloseButton: false,
-        loading: false,
-      });
-    },
-  });
 
   const osmGeom = deviation.osm_geom
     ? geojson.readGeometry(deviation.osm_geom).transform("EPSG:3006", "EPSG:3857")
@@ -172,16 +239,19 @@ const Page: FC<{
   const center4326 = getCenter(geom.transform("EPSG:3006", "EPSG:4326").getExtent());
 
   const [josmInfoOpened, { open: josmInfoOpen, close: josmInfoClose }] = useDisclosure(false);
-  const [reportOpened, { open: openReport, close: closeReport }] = useDisclosure(false);
-  const reportForm = useForm({
-    initialValues: {
-      contact: "",
-      description: "",
-    },
-    validate: {
-      description: (value) => (value.length > 5 ? null : "Måste vara längre än 5 täcken"),
-    },
+
+  const { data: dagData } = useQuery({
+    queryKey: ["airflow", "dags", `deviations-${deviation.dataset?.view_name}`],
+    queryFn: async () => await getDAGs({ dagIdPattern: `deviations-${deviation.dataset?.view_name}` }),
+    enabled: deviation.dataset?.view_name !== undefined,
   });
+  const dag = useMemo(
+    () => dagData?.dags.find((d) => d.dag_id === `deviations-${deviation.dataset?.view_name}`),
+    [dagData, deviation.dataset?.view_name],
+  );
+  const { dagRun: dagRuns, latest: latestDag } = useDAGStatus(dag);
+  const latestSuccess = dagRuns.data?.dag_runs.find((dr) => dr.state === "success");
+  const trigger = useTriggerDAG();
 
   return (
     <Grid grow w="100%" styles={{ inner: { height: "100%" } }}>
@@ -319,52 +389,7 @@ const Page: FC<{
           </Tooltip>
         </Button.Group>
 
-        <Button
-          fullWidth
-          loading={isReporting}
-          disabled={isReporting}
-          onClick={openReport}
-          mt="xs"
-          color="red"
-          variant="light"
-          size="compact-xs"
-        >
-          Rapportera felaktig avvikelse
-        </Button>
-        <Modal opened={reportOpened} onClose={closeReport} centered>
-          <form
-            onSubmit={reportForm.onSubmit((values) => {
-              closeReport();
-              report({ ...values, deviation_id: deviation.id });
-              reportForm.reset();
-            })}
-          >
-            <p>
-              Beräkningen av avvikelser är ofta komplex och kan ibland gå fel. Och ibland (oftare än man skulle önska)
-              så är det underliggande datat faktiskt fel.
-            </p>
-            <p>
-              Använd detta formulär om du hittat en avvikelse som du anser vara fel på något vis, så tittar jag om det
-              behöver justeras något i systemet.
-            </p>
-            <Textarea
-              label="Beskrivning"
-              description="Beskriv vad du anser vara fel med denna avvikelse, ange gärna t.ex. länkar till relevanta källor"
-              withAsterisk
-              {...reportForm.getInputProps("description")}
-              mt="md"
-            />
-            <TextInput
-              label="Kontaktuppgifter"
-              placeholder="@Anvandare eller din@mail.se"
-              description="Ange ditt användarnamn på OSM-forumet eller din mailadress om du vill få återkoppling på din rapport"
-              {...reportForm.getInputProps("contact")}
-            />
-            <Group justify="flex-end" mt="md">
-              <Button type="submit">Skicka</Button>
-            </Group>
-          </form>
-        </Modal>
+        <ReportButton deviationId={deviation.id} />
 
         {deviation.action ? (
           <p>
@@ -525,6 +550,30 @@ const Page: FC<{
                 </Table.Td>
               </Table.Tr>
             ) : null}
+            {dag ? (
+              <Table.Tr>
+                <Table.Th>Avvikelse beräknad:</Table.Th>
+                <Table.Td style={{ display: "flex", flexDirection: "row", justifyContent: "space-between" }}>
+                  <p style={{ marginTop: 0, marginBottom: 0 }}>
+                    {dagRuns.isPending ? (
+                      <Loader size="xs" />
+                    ) : latestSuccess ? (
+                      <TimeAgo date={latestSuccess.start_date} />
+                    ) : null}
+                  </p>
+                  <ActionIcon
+                    size="xs"
+                    radius="xl"
+                    loading={trigger.isPending}
+                    disabled={trigger.isPending || latestDag?.state === "queued" || latestDag?.state === "running"}
+                    title="Beräkna om avvikelser"
+                    onClick={() => trigger.mutate(dag)}
+                  >
+                    <IconBug size="90%" style={{ marginTop: "-10%" }} />
+                  </ActionIcon>
+                </Table.Td>
+              </Table.Tr>
+            ) : null}
           </Table.Tbody>
         </Table>
 
@@ -675,7 +724,7 @@ const PageOuter: FC<{ params: { id: string } }> = ({ params }) => {
       await postgrest
         .from("deviation")
         .select(
-          "*,osm_geom,dataset(id,name,short_name,provider(name),url,license,fetched_at),layer(id,name,description),nearby(id,title,center)",
+          "*,osm_geom,dataset(id,name,short_name,provider(name),url,license,fetched_at,view_name),layer(id,name,description),nearby(id,title,center)",
         )
         .eq("id", id)
         .single()

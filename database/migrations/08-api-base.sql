@@ -6,7 +6,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
 
 CREATE OR REPLACE VIEW api.provider AS SELECT id, name, url FROM upstream.provider;
-CREATE OR REPLACE VIEW api.dataset AS SELECT id, name, short_name, provider_id, url, license, fetched_at FROM upstream.dataset;
+CREATE OR REPLACE VIEW api.dataset AS SELECT id, name, short_name, provider_id, url, license, fetched_at, view_name FROM upstream.dataset;
 CREATE OR REPLACE VIEW api.upstream_item AS SELECT id, geometry, original_attributes, dataset_id FROM upstream.item;
 
 CREATE OR REPLACE FUNCTION api.extent(api.dataset)

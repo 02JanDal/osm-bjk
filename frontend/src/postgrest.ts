@@ -42,6 +42,7 @@ export type DatasetRow = {
   license: string;
   extent?: object;
   fetched_at?: string;
+  view_name?: string;
 };
 export type ProviderRow = {
   id: number;

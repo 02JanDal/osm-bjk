@@ -1,0 +1,21 @@
+{
+  "name": "BästaJävlaKartan Frontend",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node",
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": {
+      "label": "Frontend",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "updateContentCommand": "cd frontend && npm install",
+  "postAttachCommand": "cd frontend && npm run dev",
+  "customizations": {
+    "codespaces": {
+      "openFiles": ["frontend/src/App.tsx"]
+    },
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
+    }
+  }
+}

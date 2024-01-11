@@ -82,22 +82,34 @@ END;
 $_$;
 
 CREATE OR REPLACE FUNCTION upstream.sync_deviations(view_name text) RETURNS record
-    LANGUAGE sql
+    LANGUAGE plpgsql
     AS $_$
-WITH deviations AS (SELECT * FROM upstream._dynamic_deviations_by_view_name(view_name)),
-	 insertions AS (
-		 INSERT INTO api.deviation (dataset_id, layer_id, upstream_item_ids, suggested_geom, suggested_tags, osm_element_id, osm_element_type, title, description, note, view_name)
-		 SELECT dataset_id, layer_id, upstream_item_ids, suggested_geom, suggested_tags, osm_element_id, osm_element_type, title, description, note, view_name FROM deviations
-		 ON CONFLICT ON CONSTRAINT uniq DO UPDATE SET suggested_geom = EXCLUDED.suggested_geom, suggested_tags = EXCLUDED.suggested_tags, description = EXCLUDED.description, note = EXCLUDED.note
-		 RETURNING *
-	 ),
-	 deletions AS (
-		 DELETE FROM api.deviation
-	 	 WHERE deviation.view_name = view_name AND (deviation.action IS NULL OR deviation.action = 'deferred')
-		   AND NOT EXISTS (SELECT 1 FROM deviations WHERE deviation.dataset_id = deviations.dataset_id AND deviation.layer_id = deviations.layer_id AND deviation.upstream_item_ids = deviations.upstream_item_ids AND deviation.osm_element_id = deviations.osm_element_id AND deviation.osm_element_type = deviations.osm_element_type AND deviation.title = deviations.title)
-		 RETURNING *
-	 )
-SELECT (SELECT COUNT(*) FROM insertions) as i, (SELECT COUNT(*) FROM deletions) as d;
+DECLARE
+	i integer;
+	d integer;
+BEGIN
+    BEGIN
+        EXECUTE format('REFRESH MATERIALIZED VIEW upstream.%I', 'mv_match_' || view_name);
+    EXCEPTION WHEN SQLSTATE '42P01' THEN
+    END;
+
+    WITH deviations AS (SELECT * FROM upstream._dynamic_deviations_by_view_name(view_name)),
+         insertions AS (
+             INSERT INTO api.deviation (dataset_id, layer_id, upstream_item_ids, suggested_geom, suggested_tags, osm_element_id, osm_element_type, title, description, note, view_name)
+             SELECT dataset_id, layer_id, upstream_item_ids, suggested_geom, suggested_tags, osm_element_id, osm_element_type, title, description, note, view_name FROM deviations
+             ON CONFLICT ON CONSTRAINT uniq DO UPDATE SET suggested_geom = EXCLUDED.suggested_geom, suggested_tags = EXCLUDED.suggested_tags, description = EXCLUDED.description, note = EXCLUDED.note
+             RETURNING *
+         ),
+         deletions AS (
+             DELETE FROM api.deviation
+             WHERE deviation.view_name = $1 AND (deviation.action IS NULL OR deviation.action = 'deferred')
+               AND NOT EXISTS (SELECT 1 FROM deviations WHERE deviation.dataset_id = deviations.dataset_id AND deviation.layer_id = deviations.layer_id AND deviation.upstream_item_ids = deviations.upstream_item_ids AND deviation.osm_element_id = deviations.osm_element_id AND deviation.osm_element_type = deviations.osm_element_type AND deviation.title = deviations.title)
+             RETURNING *
+         )
+    SELECT INTO i, d (SELECT COUNT(*) FROM insertions), (SELECT COUNT(*) FROM deletions);
+
+	RETURN (i, d);
+END;
 $_$;
 
 GRANT ALL ON FUNCTION upstream._dynamic_deviations_by_view_name(view_name text) TO app;

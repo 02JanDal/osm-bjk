@@ -1,13 +1,18 @@
-import { FC } from "react";
+import { FC, useCallback } from "react";
 import postgrest from "../postgrest.ts";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Anchor, Button, Grid, Table } from "@mantine/core";
+import { Anchor, Box, Button, Grid, Group, Stack, Table, Text } from "@mantine/core";
 import { Link } from "wouter";
 import { IconBug } from "@tabler/icons-react";
-import { RFeature, RLayerVector, RMap, ROSM } from "rlayers";
-import { GeoJSON } from "ol/format";
+import { RFeature, RLayerVector, RLayerVectorTile, RMap, ROSM } from "rlayers";
+import { GeoJSON, MVT } from "ol/format";
 import { boundingExtent, getCenter } from "ol/extent";
 import { fromLonLat } from "ol/proj";
+import { Circle, Fill, Icon, Stroke, Style } from "ol/style";
+import { FeatureLike } from "ol/Feature";
+import { Point } from "ol/geom";
+
+import arrow from "../assets/arrow-33-xxl.png";
 
 const geojson = new GeoJSON();
 
@@ -27,37 +32,61 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
   return (
     <Grid grow w="100%" styles={{ inner: { height: "100%" } }}>
       <Grid.Col span={{ base: 12, sm: 5, md: 4, xl: 3 }}>
-        <Table>
-          <Table.Tbody>
-            <Table.Tr>
-              <Table.Th>Källa:</Table.Th>
-              <Table.Td>{dataset.data!.provider?.name}</Table.Td>
-            </Table.Tr>
-            <Table.Tr>
-              <Table.Th>Namn:</Table.Th>
-              <Table.Td>{dataset.data!.name}</Table.Td>
-            </Table.Tr>
-            <Table.Tr>
-              <Table.Th>Mer information:</Table.Th>
-              <Table.Td>
-                <Anchor href={dataset.data!.url}>{new URL(dataset.data!.url).host.replace("www.", "")}</Anchor>
-              </Table.Td>
-            </Table.Tr>
-            <Table.Tr>
-              <Table.Th>Licens:</Table.Th>
-              <Table.Td>
-                <Anchor href={dataset.data!.license}>
-                  {dataset.data!.license === "https://creativecommons.org/publicdomain/zero/1.0/" ? "CC 0" : null}
-                </Anchor>
-              </Table.Td>
-            </Table.Tr>
-          </Table.Tbody>
-        </Table>
-        <Link to={`/deviations?dataset=${dataset.data!.id}`}>
-          <Button variant="filled" justify="center" fullWidth leftSection={<IconBug />}>
-            Visa avvikelser
-          </Button>
-        </Link>
+        <Stack h="100%" justify="space-between">
+          <Stack>
+            <Table>
+              <Table.Tbody>
+                <Table.Tr>
+                  <Table.Th>Källa:</Table.Th>
+                  <Table.Td>{dataset.data!.provider?.name}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Th>Namn:</Table.Th>
+                  <Table.Td>{dataset.data!.name}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Th>Mer information:</Table.Th>
+                  <Table.Td>
+                    <Anchor href={dataset.data!.url}>{new URL(dataset.data!.url).host.replace("www.", "")}</Anchor>
+                  </Table.Td>
+                </Table.Tr>
+                <Table.Tr>
+                  <Table.Th>Licens:</Table.Th>
+                  <Table.Td>
+                    <Anchor href={dataset.data!.license}>
+                      {dataset.data!.license === "https://creativecommons.org/publicdomain/zero/1.0/" ? "CC 0" : null}
+                    </Anchor>
+                  </Table.Td>
+                </Table.Tr>
+              </Table.Tbody>
+            </Table>
+            <Link to={`/deviations?dataset=${dataset.data!.id}`}>
+              <Button variant="filled" justify="center" fullWidth leftSection={<IconBug />}>
+                Visa avvikelser
+              </Button>
+            </Link>
+          </Stack>
+          <Stack gap={0}>
+            <Group style={{ flexWrap: "nowrap" }} gap="xs">
+              <Box w={15} h={15} bg="green" style={{ border: "2px solid green", borderRadius: "100%" }} />
+              <div>Saknas i OpenStreetMap</div>
+            </Group>
+            <Group style={{ flexWrap: "nowrap" }} gap="xs">
+              <Box w={15} h={15} bg="red" style={{ border: "2px solid red", borderRadius: "100%" }} />
+              <div>Saknas i datakällan</div>
+            </Group>
+            <Group style={{ flexWrap: "nowrap", alignItems: "flex-start" }} gap="xs">
+              <Box w={15} h={15} bg="blue" style={{ border: "2px solid blue", borderRadius: "100%", marginTop: 5 }} />
+              <div>
+                Matchning hittad
+                <br />
+                <Text fz="sm" c="dimmed">
+                  Pil pekar från objekt i datakällan till objekt i OSM
+                </Text>
+              </div>
+            </Group>
+          </Stack>
+        </Stack>
       </Grid.Col>
       <Grid.Col span={{ base: 12, sm: 7, md: 8, xl: 9 }}>
         <div
@@ -85,6 +114,59 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
                 <RFeature geometry={extent} />
               </RLayerVector>
             ) : null}
+            <RLayerVectorTile
+              url={"https://osm.jandal.se/tiles/api.tile_match_schools_skolverket/{z}/{x}/{y}.pbf"}
+              format={new MVT()}
+              zIndex={20}
+              minZoom={10}
+              style={useCallback((f: FeatureLike, resolution: number) => {
+                const state = f.get("state") as "not-in-osm" | "not-in-upstream" | "in-both";
+                if (state === "not-in-osm") {
+                  return new Style({
+                    image: new Circle({
+                      stroke: new Stroke({ width: 2, color: "green" }),
+                      fill: new Fill({ color: "rgba(0, 255, 0, 0.7)" }),
+                      radius: 5,
+                    }),
+                  });
+                } else if (state === "not-in-upstream") {
+                  return new Style({
+                    image: new Circle({
+                      stroke: new Stroke({ width: 2, color: "red" }),
+                      fill: new Fill({ color: "rgba(255, 0, 0, 0.7)" }),
+                      radius: 5,
+                    }),
+                  });
+                } else {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const [xStart, yStart, xEnd, yEnd] = (f.getGeometry() as any).getFlatCoordinates();
+                  if (resolution < 10) {
+                    return [
+                      new Style({ stroke: new Stroke({ width: 2, color: "blue" }) }),
+                      new Style({
+                        geometry: new Point([xEnd, yEnd]),
+                        image: new Icon({
+                          src: arrow,
+                          anchor: [0.75, 0.5],
+                          rotateWithView: true,
+                          rotation: -Math.atan2(yEnd - yStart, xEnd - xStart),
+                          scale: 0.1,
+                        }),
+                      }),
+                    ];
+                  } else {
+                    return new Style({
+                      geometry: new Point([xEnd, yEnd]),
+                      image: new Circle({
+                        stroke: new Stroke({ width: 2, color: "blue" }),
+                        fill: new Fill({ color: "rgba(0, 0, 255, 0.7)" }),
+                        radius: 5,
+                      }),
+                    });
+                  }
+                }
+              }, [])}
+            ></RLayerVectorTile>
           </RMap>
         </div>
       </Grid.Col>

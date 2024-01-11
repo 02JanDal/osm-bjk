@@ -80,3 +80,29 @@ CREATE OR REPLACE VIEW upstream.v_deviation_schools_skolverket AS
 
 GRANT SELECT ON TABLE upstream.v_match_schools_skolverket TO app;
 GRANT SELECT ON TABLE upstream.v_deviation_schools_skolverket TO app;
+
+CREATE OR REPLACE FUNCTION api.tile_match_schools_skolverket(z integer, x integer, y integer)
+    RETURNS bytea
+    LANGUAGE 'sql'
+    STABLE PARALLEL SAFE
+    SECURITY DEFINER
+AS $$
+	WITH
+		bounds AS (SELECT ST_TileEnvelope(z, x, y) AS geom),
+		mvtgeom AS (
+			SELECT ST_AsMVTGeom(ST_Transform(CASE
+											 WHEN items.upstream_geom IS NOT NULL AND element.geom IS NOT NULL THEN ST_MakeLine(ST_Centroid(items.upstream_geom), ST_Centroid(element.geom))
+											 WHEN items.upstream_geom IS NOT NULL THEN ST_Centroid(items.upstream_geom)
+											 WHEN element.geom IS NOT NULL THEN ST_Centroid(element.geom)
+											 END, 3857), bounds.geom) AS geom,
+				items.upstream_tags::text AS upstream_tags,
+				CASE WHEN element.id IS NULL THEN 'not-in-osm'
+					 WHEN array_length(items.upstream_item_ids, 1) IS NULL THEN 'not-in-upstream'
+					 ELSE 'in-both' END AS state
+			FROM upstream.mv_match_schools_skolverket items
+			LEFT OUTER JOIN osm.element ON items.osm_element_id = element.id AND items.osm_element_type = element.type
+			INNER JOIN bounds ON ST_Intersects(items.upstream_geom, ST_Transform(bounds.geom, 3006)) OR (element.id IS NOT NULL AND ST_Intersects(element.geom, ST_Transform(bounds.geom, 3006)))
+		)
+		SELECT ST_AsMVT(mvtgeom, 'default')
+		FROM mvtgeom;
+$$;

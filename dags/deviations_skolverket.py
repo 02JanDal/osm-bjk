@@ -4,7 +4,7 @@ from airflow import DAG, Dataset
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
 with DAG(
-    "deviations-schools-skolverket",
+    "deviations-schools_skolverket",
     description="Updates deviations based on v_deviations_schools_skolverket",
     schedule=[Dataset(f"psql://upstream/skolverket/skolenhetsregistret")],
     start_date=datetime(2024, 1, 1, 0, 0),

@@ -1,10 +1,5 @@
 CREATE OR REPLACE VIEW upstream.v_deviation_anlaggningsomrade_topo50 AS
-WITH gavle AS (
-         SELECT municipality.geom
-           FROM api.municipality
-          WHERE municipality.code = '2180'
-        ),
-		missing AS (
+WITH missing AS (
 	SELECT item.*, jsonb_build_object('site', 'winter_sports') as tags, item.original_attributes->>'andamal' as title FROM upstream.item
 	LEFT OUTER JOIN osm.element ON ST_DWithin(item.geometry, element.geom, 1000) AND (element.tags ? 'landuse' OR element.tags ? 'leisure') AND (element.tags->>'landuse' = 'winter_sports' OR ((element.tags->>'landuse' = 'recreation_ground' AND element.tags->>'sport' = 'skiing') OR (element.tags->>'leisure' = 'sports_centre' AND element.tags->>'sport' = 'skiing')))
 	WHERE item.dataset_id = 140 AND item.original_attributes->>'andamal' = 'Vintersportanläggning' AND element.id IS NULL
@@ -48,7 +43,7 @@ WITH gavle AS (
 	WHERE item.dataset_id = 140 AND item.original_attributes->>'andamal' = 'Sjukhusområde' AND element.id IS NULL
 	UNION ALL
 	SELECT item.*, jsonb_build_object('amenity', 'recycling'), item.original_attributes->>'andamal' as title FROM upstream.item
-	LEFT OUTER JOIN osm.element ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags ? 'amenity' AND element.tags->>'amenity' = 'recycling'
+	LEFT OUTER JOIN osm.element ON ST_DWithin(item.geometry, element.geom, 500) AND ((element.tags ? 'amenity' AND element.tags->>'amenity' = 'recycling') OR (element.tags ? 'landuse' AND element.tags->>'landuse' = 'industrial' AND element.tags->>'industrial' IN ('auto_wrecker', 'scrap_yard')))
 	WHERE item.dataset_id = 140 AND item.original_attributes->>'andamal' = 'Avfallsanläggning' AND element.id IS NULL
 	UNION ALL
 	SELECT item.*, jsonb_build_object('landuse', 'industrial', 'industrial', 'mine'), item.original_attributes->>'andamal' as title FROM upstream.item
@@ -109,7 +104,8 @@ SELECT 140 AS dataset_id,
     NULL::osm.element_type AS osm_element_type,
     missing.title || ' saknas' AS title,
 	'Enligt Lantmäteriets 1:50 000 karta ska det finnas en ' || LOWER(missing.title) || ' här' AS description,
-	'' AS note
+	CASE WHEN missing.original_attributes->>'andamal' = 'Avfallsanläggning' THEN 'Kan även taggas som `landuse=industrial`+`industrial=scrap_yard` eller `landuse=industrial`+`industrial=auto_wrecker`, kontrollera mot flygbild eller annan källa för att säkerställa att taggningen blir rätt'
+	ELSE '' END AS note
 FROM missing;
 
 GRANT SELECT ON TABLE upstream.v_deviation_anlaggningsomrade_topo50 TO app;

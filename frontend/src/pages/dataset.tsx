@@ -162,13 +162,15 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
                 <RFeature geometry={extent} />
               </RLayerVector>
             ) : null}
-            <RLayerVectorTile
-              url="https://osm.jandal.se/tiles/api.tile_match_schools_skolverket/{z}/{x}/{y}.pbf"
-              format={new MVT()}
-              zIndex={20}
-              minZoom={10}
-              style={matchStyle}
-            />
+            {dataset.data?.view_name ? (
+              <RLayerVectorTile
+                url={`https://osm.jandal.se/tiles/api.tile_match_${dataset.data.view_name}/{z}/{x}/{y}.pbf`}
+                format={new MVT()}
+                zIndex={20}
+                minZoom={10}
+                style={matchStyle}
+              />
+            ) : null}
           </RMap>
         </div>
       </Grid.Col>

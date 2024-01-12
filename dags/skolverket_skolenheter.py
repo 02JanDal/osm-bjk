@@ -112,7 +112,7 @@ with DAG(
                                     bytes,
                                     shapely.geometry.Point(
                                         float(unit["Besoksadress"]["GeoData"]["Koordinat_SweRef_E"].replace(",", ".")),
-                                        float(unit["Besoksadress"]["GeoData"]["Koordinat_SweRef_E"].replace(",", ".")),
+                                        float(unit["Besoksadress"]["GeoData"]["Koordinat_SweRef_N"].replace(",", ".")),
                                     ).wkb,
                                 ),
                                 3006,

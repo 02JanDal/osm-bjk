@@ -26,13 +26,58 @@ import {
   COLORS_FOR_DEVIATION_COUNT,
   COLORS_FOR_MONTHS_SINCE_CHECK,
 } from "../lib/colors.ts";
-import { RLayerVectorTile, RMap, ROSM, RStyle } from "rlayers";
+import { RMap, ROSM, RStyle } from "rlayers";
 import { swedenInitial } from "../lib/map.ts";
-import { MVT } from "ol/format";
 import { Feature } from "ol";
 import { createEnumParam, StringParam, useQueryParams, withDefault } from "use-query-params";
 import _ from "lodash";
 import { useLocation } from "wouter";
+import { MunicipalityVectorTiles } from "../components/map.tsx";
+
+const CheckedLegend: FC = () => (
+  <Stack gap={0}>
+    {COLORS_FOR_MONTHS_SINCE_CHECK.map(([count, color], idx) => (
+      <Group key={idx}>
+        <Box w={10} h={10} bg={color} />
+        {count === null
+          ? "Aldrig kontrollerat"
+          : count === ABOVE
+            ? `Mer än ${COLORS_FOR_MONTHS_SINCE_CHECK.slice(-3, -2)[0][0] as number} månader sedan`
+            : `${count} eller färre månader sedan`}
+      </Group>
+    ))}
+  </Stack>
+);
+const DatasetUsageLegend: FC = () => (
+  <Stack gap={0}>
+    {COLORS_FOR_DATASET_USAGE.map(([dataset, color], idx) => (
+      <Group key={idx}>
+        <Box w={10} h={10} bg={color} />
+        {dataset === ABOVE
+          ? "Datakälla saknas"
+          : dataset === "advisory"
+            ? "Vägledande"
+            : dataset === "complete"
+              ? "Fullständig"
+              : "Automatisk"}
+      </Group>
+    ))}
+  </Stack>
+);
+const DeviationCountLegend: FC = () => (
+  <Stack gap={0}>
+    {COLORS_FOR_DEVIATION_COUNT.map(([count, color], idx) => (
+      <Group key={idx}>
+        <Box w={10} h={10} bg={color} />
+        {count === ABOVE
+          ? `Fler än ${COLORS_FOR_DEVIATION_COUNT.slice(-2, -1)[0][0] as number}`
+          : count === 0
+            ? "Inga avvikelser"
+            : `${count} eller färre`}
+      </Group>
+    ))}
+  </Stack>
+);
 
 const Page: FC = () => {
   const [query, setQuery] = useQueryParams({
@@ -43,25 +88,18 @@ const Page: FC = () => {
   const [{ data: municipalities }, { data: layers }] = useSuspenseQueries({
     queries: [
       {
-        queryKey: ["municipality"],
+        queryKey: ["municipality-for-map"],
         queryFn: async () =>
           await postgrest
             .from("municipality")
             .select(
               "code,deviation_title(layer_id,count),municipality_dataset(datasetType:dataset_type,layer_id),municipality_layer(lastChecked:last_checked,layer_id)",
             )
-            .order("code")
             .throwOnError(),
       },
       {
         queryKey: ["layer"],
-        queryFn: async () =>
-          await postgrest
-            .from("layer")
-            .select("*")
-            .order("is_major", { ascending: false })
-            .order("name")
-            .throwOnError(),
+        queryFn: async () => await postgrest.from("layer").select("*").throwOnError(),
       },
     ],
   });
@@ -96,10 +134,7 @@ const Page: FC = () => {
     >
       <RMap width="100%" height="100%" initial={swedenInitial}>
         <ROSM />
-        <RLayerVectorTile
-          url="https://osm.jandal.se/tiles/api.municipality/{z}/{x}/{y}.pbf"
-          format={new MVT()}
-          zIndex={20}
+        <MunicipalityVectorTiles
           onClick={(evt) => {
             const features = evt.map.getFeaturesAtPixel(evt.pixel, {
               layerFilter: (layer) => layer.getZIndex() === 20,
@@ -109,38 +144,33 @@ const Page: FC = () => {
               setLocation(`/municipalities/${code}`);
             }
           }}
-        >
-          <RStyle.RStyle
-            cacheSize={300}
-            cacheId={(feature) => feature.get("code")}
-            render={useCallback(
-              (f: Feature) => {
-                const currentStats = stats[f.get("code")];
-                return query.style === "checked" ? (
-                  <RStyle.RFill
-                    color={rgba(
-                      theme.colors[
-                        colorForMonthsSinceCheck(
-                          currentStats.lastChecked
-                            ? differenceInMonths(new Date(), new Date(currentStats.lastChecked))
-                            : null,
-                        )
-                      ][5],
-                      0.7,
-                    )}
-                  />
-                ) : query.style === "deviations" ? (
-                  <RStyle.RFill
-                    color={rgba(theme.colors[colorForDeviationCount(currentStats.deviationsCount)][5], 0.7)}
-                  />
-                ) : (
-                  <RStyle.RFill color={rgba(theme.colors[colorForDatasetUsage(currentStats.datasetType)][5], 0.7)} />
-                );
-              },
-              [stats, query.style, theme.colors],
-            )}
-          />
-        </RLayerVectorTile>
+          style={useCallback(
+            (f: Feature) => {
+              const currentStats = stats[f.get("code")];
+              return query.style === "checked" ? (
+                <RStyle.RFill
+                  color={rgba(
+                    theme.colors[
+                      colorForMonthsSinceCheck(
+                        currentStats.lastChecked
+                          ? differenceInMonths(new Date(), new Date(currentStats.lastChecked))
+                          : null,
+                      )
+                    ][5],
+                    0.7,
+                  )}
+                />
+              ) : query.style === "deviations" ? (
+                <RStyle.RFill
+                  color={rgba(theme.colors[colorForDeviationCount(currentStats.deviationsCount)][5], 0.7)}
+                />
+              ) : (
+                <RStyle.RFill color={rgba(theme.colors[colorForDatasetUsage(currentStats.datasetType)][5], 0.7)} />
+              );
+            },
+            [stats, query.style, theme.colors],
+          )}
+        />
       </RMap>
       <Popover
         width={query.style === "checked" ? 300 : 200}
@@ -167,7 +197,7 @@ const Page: FC = () => {
           <Select
             value={query.layer}
             onChange={(v) => setQuery({ layer: v || "checked" })}
-            data={_.sortBy(layers.data!, "name").map((d) => ({
+            data={_.sortBy(layers.data!, "is_major", "name").map((d) => ({
               value: String(d.id),
               label: d.name,
             }))}
@@ -188,50 +218,16 @@ const Page: FC = () => {
             style={{ marginTop: "var(--mantine-spacing-xs)" }}
             disabled={!query.layer}
           />
+
           <Title order={5} mt="sm">
             Färgförklaring
           </Title>
           {query.style === "checked" ? (
-            <Stack gap={0}>
-              {COLORS_FOR_MONTHS_SINCE_CHECK.map(([count, color], idx) => (
-                <Group key={idx}>
-                  <Box w={10} h={10} bg={color} />
-                  {count === null
-                    ? "Aldrig kontrollerat"
-                    : count === ABOVE
-                      ? `Mer än ${COLORS_FOR_MONTHS_SINCE_CHECK.slice(-3, -2)[0][0] as number} månader sedan`
-                      : `${count} eller färre månader sedan`}
-                </Group>
-              ))}
-            </Stack>
+            <CheckedLegend />
           ) : query.style === "dataset" ? (
-            <Stack gap={0}>
-              {COLORS_FOR_DATASET_USAGE.map(([dataset, color], idx) => (
-                <Group key={idx}>
-                  <Box w={10} h={10} bg={color} />
-                  {dataset === ABOVE
-                    ? "Datakälla saknas"
-                    : dataset === "advisory"
-                      ? "Vägledande"
-                      : dataset === "complete"
-                        ? "Fullständig"
-                        : "Automatisk"}
-                </Group>
-              ))}
-            </Stack>
+            <DatasetUsageLegend />
           ) : (
-            <Stack gap={0}>
-              {COLORS_FOR_DEVIATION_COUNT.map(([count, color], idx) => (
-                <Group key={idx}>
-                  <Box w={10} h={10} bg={color} />
-                  {count === ABOVE
-                    ? `Fler än ${COLORS_FOR_DEVIATION_COUNT.slice(-2, -1)[0][0] as number}`
-                    : count === 0
-                      ? "Inga avvikelser"
-                      : `${count} eller färre`}
-                </Group>
-              ))}
-            </Stack>
+            <DeviationCountLegend />
           )}
         </Popover.Dropdown>
       </Popover>

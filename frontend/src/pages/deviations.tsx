@@ -15,6 +15,7 @@ import { swedenExtent, swedenInitial } from "../lib/map.ts";
 import { useLocalStorage, useSessionStorage, useDisclosure } from "@mantine/hooks";
 import { Box } from "@mantine/core";
 import { Coordinate } from "ol/coordinate";
+import { MunicipalityVectorTiles } from "../components/map.tsx";
 
 const geojson = new GeoJSON();
 
@@ -311,29 +312,21 @@ const Page: FC = () => {
           <RMap width="100%" height="100%" initial={view} view={[view, setView]}>
             <Zoomer selected={(query.municipality as string[]) || []} municipalities={municipalities.data!} />
             <ROSM />
-            <RLayerVectorTile
-              url="https://osm.jandal.se/tiles/api.municipality/{z}/{x}/{y}.pbf"
-              format={new MVT()}
-              zIndex={20}
-            >
-              <RStyle.RStyle
-                cacheSize={300}
-                cacheId={(feature) => feature.get("code")}
-                render={useCallback(
-                  (f: Feature) => (
-                    <RStyle.RStroke
-                      width={query.municipality?.includes(f.get("code")) === false ? 1 : 2}
-                      color={
-                        query.municipality?.includes(f.get("code")) === false
-                          ? "rgba(0, 0, 255, 0.5)"
-                          : "rgba(0, 0, 255, 1.0)"
-                      }
-                    />
-                  ),
-                  [query.municipality],
-                )}
-              />
-            </RLayerVectorTile>
+            <MunicipalityVectorTiles
+              style={useCallback(
+                (f: Feature) => (
+                  <RStyle.RStroke
+                    width={query.municipality?.includes(f.get("code")) === false ? 1 : 2}
+                    color={
+                      query.municipality?.includes(f.get("code")) === false
+                        ? "rgba(0, 0, 255, 0.5)"
+                        : "rgba(0, 0, 255, 1.0)"
+                    }
+                  />
+                ),
+                [query.municipality],
+              )}
+            />
             <RLayerVectorTile
               url={`https://osm.jandal.se/tiles/api.deviation/{z}/{x}/{y}.pbf?filter=${encodeURIComponent(cql)}`}
               format={new MVT()}
@@ -364,7 +357,7 @@ const Page: FC = () => {
               }}
             >
               <RStyle.RStyle
-                cacheSize={100}
+                cacheSize={200}
                 cacheId={(feature) => feature.get("title")}
                 render={useCallback(
                   (f: Feature) => (

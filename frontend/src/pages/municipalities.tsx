@@ -22,6 +22,25 @@ import {
   colorForMonthsSinceCheck,
 } from "../lib/colors.ts";
 
+const LastCheckIcon: FC<{ monthsSinceCheck: number | null }> = ({ monthsSinceCheck }) =>
+  monthsSinceCheck === null ? (
+    <IconClockX style={{ width: "70%", height: "70%", color: colorForMonthsSinceCheck(monthsSinceCheck) }} />
+  ) : monthsSinceCheck < 6 ? (
+    <IconClockCheck style={{ width: "70%", height: "70%", color: colorForMonthsSinceCheck(monthsSinceCheck) }} />
+  ) : monthsSinceCheck < 24 ? (
+    <IconClockQuestion style={{ width: "70%", height: "70%", color: colorForMonthsSinceCheck(monthsSinceCheck) }} />
+  ) : (
+    <IconClockExclamation style={{ width: "70%", height: "70%", color: colorForMonthsSinceCheck(monthsSinceCheck) }} />
+  );
+const DatasetUsageIcon: FC<{ usage: DatasetUsage | undefined }> = ({ usage }) =>
+  usage === "advisory" ? (
+    <IconDatabase style={{ width: "70%", height: "70%", color: colorForDatasetUsage(usage) }} />
+  ) : usage === "complete" ? (
+    <IconDatabaseStar style={{ width: "70%", height: "70%", color: colorForDatasetUsage(usage) }} />
+  ) : (
+    <IconDatabaseCog style={{ width: "70%", height: "70%", color: colorForDatasetUsage(usage) }} />
+  );
+
 const MunicipalityLayer: FC<{
   layer: LayerRow;
   datasets: {
@@ -51,62 +70,20 @@ const MunicipalityLayer: FC<{
           }
         >
           <ActionIcon variant="transparent" color="black">
-            {monthsSinceCheck === null ? (
-              <IconClockX style={{ width: "70%", height: "70%", color: colorForMonthsSinceCheck(monthsSinceCheck) }} />
-            ) : monthsSinceCheck < 6 ? (
-              <IconClockCheck
-                style={{ width: "70%", height: "70%", color: colorForMonthsSinceCheck(monthsSinceCheck) }}
-              />
-            ) : monthsSinceCheck < 24 ? (
-              <IconClockQuestion
-                style={{ width: "70%", height: "70%", color: colorForMonthsSinceCheck(monthsSinceCheck) }}
-              />
-            ) : (
-              <IconClockExclamation
-                style={{ width: "70%", height: "70%", color: colorForMonthsSinceCheck(monthsSinceCheck) }}
-              />
-            )}
+            <LastCheckIcon monthsSinceCheck={monthsSinceCheck} />
           </ActionIcon>
         </Tooltip>
         {datasets.length === 0 ? null : datasets.length === 1 ? (
           <Tooltip label={`${datasets[0].dataset!.name} från ${datasets[0].dataset!.provider!.name}`}>
             <Link to={`/datasets/${datasets[0].dataset!.id}?municipality=${municipality.code}`}>
               <ActionIcon variant="transparent" color="black">
-                {datasets[0].datasetType === "advisory" ? (
-                  <IconDatabase
-                    style={{ width: "70%", height: "70%", color: colorForDatasetUsage(datasets[0].datasetType) }}
-                  />
-                ) : datasets[0].datasetType === "complete" ? (
-                  <IconDatabaseStar
-                    style={{ width: "70%", height: "70%", color: colorForDatasetUsage(datasets[0].datasetType) }}
-                  />
-                ) : (
-                  <IconDatabaseCog
-                    style={{
-                      width: "70%",
-                      height: "70%",
-                      color: colorForDatasetUsage(datasets[0].datasetType ?? undefined),
-                    }}
-                  />
-                )}
+                <DatasetUsageIcon usage={datasets[0].datasetType ?? undefined} />
               </ActionIcon>
             </Link>
           </Tooltip>
         ) : (
           <ActionIcon variant="transparent" color="black">
-            {bestDatasetType(datasets) === "advisory" ? (
-              <IconDatabase
-                style={{ width: "70%", height: "70%", color: colorForDatasetUsage(bestDatasetType(datasets)) }}
-              />
-            ) : bestDatasetType(datasets) === "complete" ? (
-              <IconDatabaseStar
-                style={{ width: "70%", height: "70%", color: colorForDatasetUsage(bestDatasetType(datasets)) }}
-              />
-            ) : (
-              <IconDatabaseCog
-                style={{ width: "70%", height: "70%", color: colorForDatasetUsage(bestDatasetType(datasets)) }}
-              />
-            )}
+            <DatasetUsageIcon usage={bestDatasetType(datasets)} />
           </ActionIcon>
         )}
         {deviations > 0 ? (

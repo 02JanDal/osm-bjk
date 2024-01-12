@@ -1,4 +1,4 @@
-import { FC, useCallback } from "react";
+import { FC } from "react";
 import postgrest from "../postgrest.ts";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Anchor, Box, Button, Grid, Group, Stack, Table, Text } from "@mantine/core";
@@ -15,6 +15,54 @@ import { Point } from "ol/geom";
 import arrow from "../assets/arrow-33-xxl.png";
 
 const geojson = new GeoJSON();
+
+function matchStyle(f: FeatureLike, resolution: number) {
+  const state = f.get("state") as "not-in-osm" | "not-in-upstream" | "in-both";
+  if (state === "not-in-osm") {
+    return new Style({
+      image: new Circle({
+        stroke: new Stroke({ width: 2, color: "green" }),
+        fill: new Fill({ color: "rgba(0, 255, 0, 0.7)" }),
+        radius: 5,
+      }),
+    });
+  } else if (state === "not-in-upstream") {
+    return new Style({
+      image: new Circle({
+        stroke: new Stroke({ width: 2, color: "red" }),
+        fill: new Fill({ color: "rgba(255, 0, 0, 0.7)" }),
+        radius: 5,
+      }),
+    });
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [xStart, yStart, xEnd, yEnd] = (f.getGeometry() as any).getFlatCoordinates();
+    if (resolution < 10) {
+      return [
+        new Style({ stroke: new Stroke({ width: 2, color: "blue" }) }),
+        new Style({
+          geometry: new Point([xEnd, yEnd]),
+          image: new Icon({
+            src: arrow,
+            anchor: [0.75, 0.5],
+            rotateWithView: true,
+            rotation: -Math.atan2(yEnd - yStart, xEnd - xStart),
+            scale: 0.1,
+          }),
+        }),
+      ];
+    } else {
+      return new Style({
+        geometry: new Point([xEnd, yEnd]),
+        image: new Circle({
+          stroke: new Stroke({ width: 2, color: "blue" }),
+          fill: new Fill({ color: "rgba(0, 0, 255, 0.7)" }),
+          radius: 5,
+        }),
+      });
+    }
+  }
+}
 
 const Page: FC<{ params: { id: string } }> = ({ params }) => {
   const id = parseInt(params.id);
@@ -115,58 +163,12 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
               </RLayerVector>
             ) : null}
             <RLayerVectorTile
-              url={"https://osm.jandal.se/tiles/api.tile_match_schools_skolverket/{z}/{x}/{y}.pbf"}
+              url="https://osm.jandal.se/tiles/api.tile_match_schools_skolverket/{z}/{x}/{y}.pbf"
               format={new MVT()}
               zIndex={20}
               minZoom={10}
-              style={useCallback((f: FeatureLike, resolution: number) => {
-                const state = f.get("state") as "not-in-osm" | "not-in-upstream" | "in-both";
-                if (state === "not-in-osm") {
-                  return new Style({
-                    image: new Circle({
-                      stroke: new Stroke({ width: 2, color: "green" }),
-                      fill: new Fill({ color: "rgba(0, 255, 0, 0.7)" }),
-                      radius: 5,
-                    }),
-                  });
-                } else if (state === "not-in-upstream") {
-                  return new Style({
-                    image: new Circle({
-                      stroke: new Stroke({ width: 2, color: "red" }),
-                      fill: new Fill({ color: "rgba(255, 0, 0, 0.7)" }),
-                      radius: 5,
-                    }),
-                  });
-                } else {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  const [xStart, yStart, xEnd, yEnd] = (f.getGeometry() as any).getFlatCoordinates();
-                  if (resolution < 10) {
-                    return [
-                      new Style({ stroke: new Stroke({ width: 2, color: "blue" }) }),
-                      new Style({
-                        geometry: new Point([xEnd, yEnd]),
-                        image: new Icon({
-                          src: arrow,
-                          anchor: [0.75, 0.5],
-                          rotateWithView: true,
-                          rotation: -Math.atan2(yEnd - yStart, xEnd - xStart),
-                          scale: 0.1,
-                        }),
-                      }),
-                    ];
-                  } else {
-                    return new Style({
-                      geometry: new Point([xEnd, yEnd]),
-                      image: new Circle({
-                        stroke: new Stroke({ width: 2, color: "blue" }),
-                        fill: new Fill({ color: "rgba(0, 0, 255, 0.7)" }),
-                        radius: 5,
-                      }),
-                    });
-                  }
-                }
-              }, [])}
-            ></RLayerVectorTile>
+              style={matchStyle}
+            />
           </RMap>
         </div>
       </Grid.Col>

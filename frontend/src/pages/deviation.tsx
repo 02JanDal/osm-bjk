@@ -1,21 +1,20 @@
 import { FC, useMemo } from "react";
 import postgrest, { DatasetRow, DeviationRow, ProviderRow, ReportInsertRow } from "../postgrest.ts";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  ActionIcon,
   Alert,
   Anchor,
   Button,
+  Flex,
   Grid,
+  Group,
   Loader,
+  Modal,
   Table,
   Text,
-  Tooltip,
-  Flex,
-  Group,
-  Modal,
-  TextInput,
   Textarea,
-  ActionIcon,
+  TextInput,
 } from "@mantine/core";
 import { Link } from "wouter";
 import { actualElementId, actualElementType, getElement } from "../lib/osm.ts";
@@ -36,35 +35,102 @@ import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { getDAGs } from "../lib/airflow.ts";
 import { useDAGStatus, useTriggerDAG } from "../hooks/dags.tsx";
-
-const TagKeyLink: FC<{ keyString: string }> = (props) => (
-  <Anchor href={`https://wiki.openstreetmap.org/wiki/Key:${props.keyString}`} target="_blank">
-    {props.keyString}
-  </Anchor>
-);
-
-const TagValueLink: FC<{ keyString: string; value: string }> = (props) => (
-  <>
-    {["amenity", "building", "landuse"].includes(props.keyString) ? (
-      <Anchor href={`https://wiki.openstreetmap.org/wiki/Tag:${props.keyString}%3D${props.value}`} target="_blank">
-        {props.value}
-      </Anchor>
-    ) : props.keyString.endsWith("wikidata") ? (
-      <Anchor href={`https://www.wikidata.org/wiki/${props.value}`} target="_blank">
-        {props.value}
-      </Anchor>
-    ) : ["url", "website", "contact:website"].includes(props.keyString) ? (
-      <Anchor href={props.value} target="_blank">
-        {props.value}
-      </Anchor>
-    ) : (
-      props.value
-    )}
-  </>
-);
+import { TagKeyLink } from "../components/TagKeyLink.tsx";
+import { TagValueLink } from "../components/TagValueLink.tsx";
 
 const geojson = new GeoJSON();
 
+const OpenInJOSMButton: FC<{
+  deviation: Pick<
+    DeviationRow,
+    "osm_element_id" | "osm_element_type" | "suggested_tags" | "suggested_geom" | "title" | "center"
+  > & { dataset: { provider: { name: string } | null; short_name: string } | null };
+}> = ({ deviation }) => {
+  const [opened, { open, close }] = useDisclosure();
+  const geom = geojson.readGeometry(deviation.center);
+  return (
+    <>
+      <Button
+        fullWidth
+        onClick={() => {
+          open();
+          const josmExtent = fromExtent(buffer(geom.getExtent(), 500)).transform("EPSG:3006", "EPSG:4326").getExtent();
+          loadAndZoom(
+            josmExtent[0],
+            josmExtent[1],
+            josmExtent[2],
+            josmExtent[3],
+            {
+              select: deviation.osm_element_id
+                ? [
+                    [
+                      actualElementType(deviation.osm_element_type, deviation.osm_element_id),
+                      actualElementId(deviation.osm_element_type, deviation.osm_element_id),
+                    ],
+                  ]
+                : undefined,
+              addTags: deviation.osm_element_id ? deviation.suggested_tags : undefined,
+              changesetSource: `${deviation.dataset!.provider!.name} ${deviation.dataset!.short_name}`,
+              changesetHashtags: ["bastajavlakartan"],
+              changesetComment: deviation.title,
+            },
+            () => {
+              const suggested = geojson.readGeometry(deviation.suggested_geom);
+              if (suggested.getType() === "Point" && !deviation.osm_element_id) {
+                const center = getCenter(suggested.transform("EPSG:3006", "EPSG:4326").getExtent());
+                setTimeout(
+                  () => addNode(center[1], center[0], deviation.suggested_tags as Record<string, string>),
+                  1000, // not sure why, but JOSM gives a 400 if calling add_node to quickly
+                );
+              }
+            },
+          );
+        }}
+      >
+        Öppna i JOSM
+      </Button>
+      <Modal opened={opened} onClose={close} title="Arbeta i JOSM" centered>
+        <p>Avvikelsen öppnas nu i JOSM. Kom ihåg att ange datakälla och gärna även hashtag:</p>
+        <code>
+          source={deviation.dataset!.provider!.name} {deviation.dataset!.short_name}
+          <br />
+          hashtags=#bastajavlakartan
+        </code>
+      </Modal>
+    </>
+  );
+};
+const OpenInID: FC<{
+  deviation: Pick<
+    DeviationRow,
+    "id" | "osm_element_id" | "osm_element_type" | "suggested_geom" | "title" | "center"
+  > & { dataset: { provider: { name: string } | null; short_name: string } | null };
+}> = ({ deviation }) => {
+  const geom = geojson.readGeometry(deviation.center);
+  const center4326 = getCenter(geom.transform("EPSG:3006", "EPSG:4326").getExtent());
+  return (
+    <Button
+      fullWidth
+      component="a"
+      href={makeLink({
+        source: `${deviation.dataset!.provider!.name} ${deviation.dataset!.short_name}`,
+        hashtags: ["bastajavlakartan"],
+        comment: deviation.title,
+        id: deviation.osm_element_id
+          ? [
+              actualElementType(deviation.osm_element_type, deviation.osm_element_id),
+              actualElementId(deviation.osm_element_type, deviation.osm_element_id),
+            ]
+          : undefined,
+        gpx: deviation.suggested_geom ? `https://osm.jandal.se/api/rpc/gpx?deviation_id=${deviation.id}` : undefined,
+        map: !deviation.osm_element_id ? [16, center4326[1], center4326[0]] : undefined,
+      })}
+      target="_blank"
+    >
+      Öppna i iD
+    </Button>
+  );
+};
 const ReportButton: FC<{ deviationId: number }> = ({ deviationId }) => {
   const [reportOpened, { open, close }] = useDisclosure(false);
   const reportForm = useForm({
@@ -210,20 +276,6 @@ const Page: FC<{
         .throwOnError(),
   });
 
-  const queryClient = useQueryClient();
-  const {
-    mutate: performAction,
-    isPending: isPerformingAction,
-    variables,
-  } = useMutation({
-    mutationFn: async (action: DeviationRow["action"]) =>
-      await postgrest.from("deviation").update({ action }).eq("id", deviation.id).throwOnError(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["deviation"] });
-      queryClient.invalidateQueries({ queryKey: ["osm-element"] });
-    },
-  });
-
   const osmGeom = deviation.osm_geom
     ? geojson.readGeometry(deviation.osm_geom).transform("EPSG:3006", "EPSG:3857")
     : undefined;
@@ -236,9 +288,6 @@ const Page: FC<{
 
   const geom = geojson.readGeometry(deviation.center);
   const extent = geom.clone().transform("EPSG:3006", "EPSG:3857").getExtent();
-  const center4326 = getCenter(geom.transform("EPSG:3006", "EPSG:4326").getExtent());
-
-  const [josmInfoOpened, { open: josmInfoOpen, close: josmInfoClose }] = useDisclosure(false);
 
   const { data: dagData } = useQuery({
     queryKey: ["airflow", "dags", `deviations-${deviation.dataset?.view_name}`],
@@ -262,149 +311,11 @@ const Page: FC<{
         <Disclaimer />
 
         <Button.Group w="100%">
-          <Button
-            fullWidth
-            component="a"
-            href={makeLink({
-              source: `${deviation.dataset!.provider!.name} ${deviation.dataset!.short_name}`,
-              hashtags: ["bastajavlakartan"],
-              comment: deviation.title,
-              id: deviation.osm_element_id
-                ? [
-                    actualElementType(deviation.osm_element_type, deviation.osm_element_id),
-                    actualElementId(deviation.osm_element_type, deviation.osm_element_id),
-                  ]
-                : undefined,
-              gpx: deviation.suggested_geom
-                ? `https://osm.jandal.se/api/rpc/gpx?deviation_id=${deviation.id}`
-                : undefined,
-              map: !deviation.osm_element_id ? [16, center4326[1], center4326[0]] : undefined,
-            })}
-            target="_blank"
-          >
-            Öppna i iD
-          </Button>
-          <Button
-            fullWidth
-            onClick={() => {
-              josmInfoOpen();
-              const josmExtent = fromExtent(buffer(geom.getExtent(), 500))
-                .transform("EPSG:3006", "EPSG:4326")
-                .getExtent();
-              loadAndZoom(
-                josmExtent[0],
-                josmExtent[1],
-                josmExtent[2],
-                josmExtent[3],
-                {
-                  select: deviation.osm_element_id
-                    ? [
-                        [
-                          actualElementType(deviation.osm_element_type, deviation.osm_element_id),
-                          actualElementId(deviation.osm_element_type, deviation.osm_element_id),
-                        ],
-                      ]
-                    : undefined,
-                  addTags: deviation.osm_element_id ? deviation.suggested_tags : undefined,
-                  changesetSource: `${deviation.dataset!.provider!.name} ${deviation.dataset!.short_name}`,
-                  changesetHashtags: ["bastajavlakartan"],
-                  changesetComment: deviation.title,
-                },
-                () => {
-                  const suggested = geojson.readGeometry(deviation.suggested_geom);
-                  if (suggested.getType() === "Point" && !deviation.osm_element_id) {
-                    const center = getCenter(suggested.transform("EPSG:3006", "EPSG:4326").getExtent());
-                    setTimeout(
-                      () => addNode(center[1], center[0], deviation.suggested_tags as Record<string, string>),
-                      1000, // not sure why, but JOSM gives a 400 if calling add_node to quickly
-                    );
-                  }
-                },
-              );
-            }}
-          >
-            Öppna i JOSM
-          </Button>
-          <Modal opened={josmInfoOpened} onClose={josmInfoClose} title="Arbeta i JOSM" centered>
-            <p>Avvikelsen öppnas nu i JOSM. Kom ihåg att ange datakälla och gärna även hashtag:</p>
-            <code>
-              source={deviation.dataset!.provider!.name} {deviation.dataset!.short_name}
-              <br />
-              hashtags=#bastajavlakartan
-            </code>
-          </Modal>
-        </Button.Group>
-        <Button.Group w="100%" mt={10}>
-          <Button
-            fullWidth
-            loading={isPerformingAction && variables === "fixed"}
-            disabled={isPerformingAction || true}
-            onClick={() => performAction("fixed")}
-            data-disabled={true}
-          >
-            Fixad nu
-          </Button>
-          <Tooltip label="T.ex. om någon annan hunnit åtgärda avvikelsen som inte använt denna sida" withArrow>
-            <Button
-              fullWidth
-              loading={isPerformingAction && variables === "already-fixed"}
-              disabled={isPerformingAction || true}
-              onClick={() => performAction("already-fixed")}
-              data-disabled={true}
-            >
-              Var redan fixad
-            </Button>
-          </Tooltip>
-        </Button.Group>
-        <Button.Group w="100%" mt={2}>
-          <Tooltip
-            label="T.ex. om felet ligger hos datakällan eller av annan anledning denna avvikelse inte bör åtgärdas i OSM"
-            withArrow
-            position="bottom"
-          >
-            <Button
-              fullWidth
-              loading={isPerformingAction && variables === "not-an-issue"}
-              disabled={isPerformingAction || true}
-              onClick={() => performAction("not-an-issue")}
-              data-disabled={true}
-            >
-              Inte ett problem
-            </Button>
-          </Tooltip>
-          <Tooltip
-            label="T.ex. om korrekt ändring inte kan avgöras än för att det saknas aktuella flygbilder, men att avvikelsen möjligen ska åtgärdas senare"
-            withArrow
-            position="bottom"
-          >
-            <Button
-              fullWidth
-              loading={isPerformingAction && variables === "deferred"}
-              disabled={isPerformingAction || true}
-              onClick={() => performAction("deferred")}
-              data-disabled={true}
-            >
-              Avvaktas med
-            </Button>
-          </Tooltip>
+          <OpenInID deviation={deviation} />
+          <OpenInJOSMButton deviation={deviation} />
         </Button.Group>
 
         <ReportButton deviationId={deviation.id} />
-
-        {deviation.action ? (
-          <p>
-            Markerades som{" "}
-            {
-              {
-                fixed: "fixad",
-                "already-fixed": "redan fixad",
-                "not-an-issue": "inte ett problem",
-                deferred: "avvaktas med",
-              }[deviation.action]
-            }{" "}
-            <TimeAgo date={deviation.action_at!} />
-          </p>
-        ) : null}
 
         {deviation.note.trim().length > 0 ? (
           <>

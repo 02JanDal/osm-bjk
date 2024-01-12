@@ -11,6 +11,7 @@ import {
   Group,
   Loader,
   Modal,
+  rem,
   Table,
   Text,
   Textarea,
@@ -29,7 +30,7 @@ import { LineString } from "ol/geom";
 import Markdown from "react-markdown";
 import { addNode, loadAndZoom } from "../lib/josm.ts";
 import { fromExtent } from "ol/geom/Polygon";
-import { IconArrowBack, IconBug, IconExclamationCircle } from "@tabler/icons-react";
+import { IconArrowBack, IconBug, IconCopy, IconExclamationCircle } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
@@ -37,6 +38,7 @@ import { getDAGs } from "../lib/airflow.ts";
 import { useDAGStatus, useTriggerDAG } from "../hooks/dags.tsx";
 import { TagKeyLink } from "../components/TagKeyLink.tsx";
 import { TagValueLink } from "../components/TagValueLink.tsx";
+import _ from "lodash";
 
 const geojson = new GeoJSON();
 
@@ -229,6 +231,24 @@ const ReportButton: FC<{ deviationId: number }> = ({ deviationId }) => {
   );
 };
 
+async function copyTags(suggested_tags: Record<string, string | null>) {
+  try {
+    await navigator.clipboard.writeText(
+      _.sortBy(Object.entries(suggested_tags), ([k, _]) => k)
+        .map(([k, v]) => `${k}=${v}`)
+        .join("\n"),
+    );
+  } catch (error) {
+    console.error(error);
+    notifications.show({
+      message: "Din webbläsare stödjer inte att kopiera text på det här viset",
+      color: "red",
+      icon: <IconCopy style={{ width: rem(20), height: rem(20) }} />,
+      autoClose: false,
+    });
+  }
+}
+
 const Page: FC<{
   deviation: {
     id: number;
@@ -326,7 +346,18 @@ const Page: FC<{
 
         {deviation.suggested_tags ? (
           <>
-            <h3>Föreslagna taggar</h3>
+            <Flex direction="row" justify="space-between" mt="md">
+              <h3 style={{ marginTop: 0 }}>Föreslagna taggar</h3>
+              <Button
+                size="xs"
+                variant="transparent"
+                leftSection={<IconCopy size={14} />}
+                title="Kopiera taggarna som text, lämpligt för att klistra in i iD"
+                onClick={copyTags.bind(null, deviation.suggested_tags)}
+              >
+                Kopiera
+              </Button>
+            </Flex>
             <Table>
               <Table.Tbody>
                 {Object.entries(deviation.suggested_tags).map(([key, value]) =>

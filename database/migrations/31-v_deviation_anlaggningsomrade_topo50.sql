@@ -25,9 +25,9 @@ WITH missing AS (
 --	LEFT OUTER JOIN osm.element ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags ? 'leisure' AND element.tags->>'leisure' = 'marina'
 --	WHERE item.dataset_id = 140 AND item.original_attributes->>'andamal' = 'Testbana' AND element.id IS NULL
 --	UNION ALL
-	SELECT item.*, jsonb_build_object('site', 'theme_park'), item.original_attributes->>'andamal' as title FROM upstream.item
+	SELECT item.*, jsonb_build_object('tourism', 'theme_park'), item.original_attributes->>'andamal' as title FROM upstream.item
 	LEFT OUTER JOIN osm.site ON ST_DWithin(item.geometry, site.geom, 500) AND site.tags->>'site' = 'theme_park'
-	LEFT OUTER JOIN osm.element ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags ? 'tourism' AND element.tags->>'tourism' IN ('theme_park', 'zoo')
+	LEFT OUTER JOIN osm.element ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags ? 'tourism' AND element.tags->>'tourism' IN ('theme_park', 'water_park', 'zoo')
 	WHERE item.dataset_id = 140 AND item.original_attributes->>'andamal' = 'Besökspark' AND element.id IS NULL AND site.id IS NULL
 	UNION ALL
 	SELECT item.*, jsonb_build_object('landuse', 'cemetery'), item.original_attributes->>'andamal' as title FROM upstream.item
@@ -105,6 +105,7 @@ SELECT 140 AS dataset_id,
     missing.title || ' saknas' AS title,
 	'Enligt Lantmäteriets 1:50 000 karta ska det finnas en ' || LOWER(missing.title) || ' här' AS description,
 	CASE WHEN missing.original_attributes->>'andamal' = 'Avfallsanläggning' THEN 'Kan även taggas som `landuse=industrial`+`industrial=scrap_yard` eller `landuse=industrial`+`industrial=auto_wrecker`, kontrollera mot flygbild eller annan källa för att säkerställa att taggningen blir rätt'
+		 WHEN missing.original_attributes->>'andamal' = 'Besökspark' THEN 'Kan även taggas som `tourism=zoo`,  eller `tourism=water_park`, kontrollera mot flygbild eller annan källa för att säkerställa att taggningen blir rätt'
 	ELSE '' END AS note
 FROM missing;
 

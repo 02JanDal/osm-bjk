@@ -21,6 +21,7 @@ import { Link } from "wouter";
 import { actualElementId, actualElementType, getElement } from "../lib/osm.ts";
 import { RFeature, RLayerVector, RMap, ROSM, RPopup, RStyle } from "rlayers";
 import { GeoJSON } from "ol/format";
+import Feature from "ol/Feature.js";
 import { buffer, getCenter } from "ol/extent";
 import TimeAgo from "../components/TimeAgo.tsx";
 import makeLink from "../lib/id.ts";
@@ -135,10 +136,9 @@ const OpenInID: FC<{
 };
 
 const Download: FC<{
-  deviation: Pick<
-    DeviationRow,
-    "id" | "osm_element_id" | "osm_element_type" | "suggested_geom" | "title" | "center"
-  > & { dataset: { provider: { name: string } | null; short_name: string } | null };
+  deviation: Pick<DeviationRow, "id" | "suggested_geom" | "suggested_tags"> & {
+    dataset: { provider: { name: string } | null; short_name: string } | null;
+  };
 }> = ({ deviation }) => {
   const [opened, { open, close }] = useDisclosure();
   return (
@@ -153,22 +153,46 @@ const Download: FC<{
   );
 };
 
+function geoJsonBlobUrl(geometryOrFeature: string) {
+  const blob = new Blob([geometryOrFeature], { type: "application/geo+json" });
+  return URL.createObjectURL(blob);
+}
+
 const GetGeoJson: FC<{
-  deviation: Pick<
-    DeviationRow,
-    "id" | "osm_element_id" | "osm_element_type" | "suggested_geom" | "title" | "center"
-  > & { dataset: { provider: { name: string } | null; short_name: string } | null };
+  deviation: Pick<DeviationRow, "id" | "suggested_geom" | "suggested_tags"> & {
+    dataset: { provider: { name: string } | null; short_name: string } | null;
+  };
 }> = ({ deviation }) => {
   const suggested = geojson.readGeometry(deviation.suggested_geom);
+  console.log(suggested);
   const geom = suggested.transform("EPSG:3006", "EPSG:4326");
-  const blob = new Blob([geojson.writeGeometry(geom)], { type: "application/geo+json" });
-  const url = URL.createObjectURL(blob);
+
+  const geojson_url = geoJsonBlobUrl(geojson.writeGeometry(geom));
   const blob_name = `Avvikelse_${deviation.id}.geojson`;
 
+  const featureUrl = () => {
+    const feature = new Feature({
+      geometry: geom,
+    });
+    feature.setProperties(deviation.suggested_tags);
+    return geoJsonBlobUrl(geojson.writeFeature(feature));
+  };
+
   return (
-    <Button fullWidth component="a" download={blob_name} href={url} target="_blank">
-      Föreslagen geometri (GeoJSON)
-    </Button>
+    <Button.Group w="100%" orientation="vertical">
+      <Button fullWidth component="a" download={blob_name} href={geojson_url} target="_blank">
+        Föreslagen geometri (GeoJSON)
+      </Button>
+      {deviation.suggested_tags ? (
+        <Button fullWidth component="a" variant="default" download={blob_name} href={featureUrl()} target="_blank">
+          + taggar
+        </Button>
+      ) : (
+        <Button fullWidth disabled={true} data-disabled={true}>
+          + taggar
+        </Button>
+      )}
+    </Button.Group>
   );
 };
 

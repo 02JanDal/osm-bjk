@@ -133,6 +133,45 @@ const OpenInID: FC<{
     </Button>
   );
 };
+
+const Download: FC<{
+  deviation: Pick<
+    DeviationRow,
+    "id" | "osm_element_id" | "osm_element_type" | "suggested_geom" | "title" | "center"
+  > & { dataset: { provider: { name: string } | null; short_name: string } | null };
+}> = ({ deviation }) => {
+  const [opened, { open, close }] = useDisclosure();
+  return (
+    <>
+      <Button fullWidth onClick={open}>
+        Hämta...
+      </Button>
+      <Modal opened={opened} onClose={close} title="Ladda ner" centered>
+        <GetGeoJson deviation={deviation} />
+      </Modal>
+    </>
+  );
+};
+
+const GetGeoJson: FC<{
+  deviation: Pick<
+    DeviationRow,
+    "id" | "osm_element_id" | "osm_element_type" | "suggested_geom" | "title" | "center"
+  > & { dataset: { provider: { name: string } | null; short_name: string } | null };
+}> = ({ deviation }) => {
+  const suggested = geojson.readGeometry(deviation.suggested_geom);
+  const geom = suggested.transform("EPSG:3006", "EPSG:4326");
+  const blob = new Blob([geojson.writeGeometry(geom)], { type: "application/geo+json" });
+  const url = URL.createObjectURL(blob);
+  const blob_name = `Avvikelse_${deviation.id}.geojson`;
+
+  return (
+    <Button fullWidth component="a" download={blob_name} href={url} target="_blank">
+      Föreslagen geometri (GeoJSON)
+    </Button>
+  );
+};
+
 const ReportButton: FC<{ deviationId: number }> = ({ deviationId }) => {
   const [reportOpened, { open, close }] = useDisclosure(false);
   const reportForm = useForm({
@@ -333,6 +372,7 @@ const Page: FC<{
         <Button.Group w="100%">
           <OpenInID deviation={deviation} />
           <OpenInJOSMButton deviation={deviation} />
+          <Download deviation={deviation} />
         </Button.Group>
 
         <ReportButton deviationId={deviation.id} />

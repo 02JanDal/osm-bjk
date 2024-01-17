@@ -21,6 +21,7 @@ import { Link } from "wouter";
 import { actualElementId, actualElementType, getElement } from "../lib/osm.ts";
 import { RFeature, RLayerVector, RMap, ROSM, RPopup, RStyle } from "rlayers";
 import { GeoJSON } from "ol/format";
+import Feature from "ol/Feature.js";
 import { buffer, getCenter } from "ol/extent";
 import TimeAgo from "../components/TimeAgo.tsx";
 import makeLink from "../lib/id.ts";
@@ -133,6 +134,63 @@ const OpenInID: FC<{
     </Button>
   );
 };
+
+const Download: FC<{
+  deviation: Pick<DeviationRow, "id" | "suggested_geom" | "suggested_tags">;
+}> = ({ deviation }) => {
+  const [opened, { open, close }] = useDisclosure();
+  return (
+    <>
+      <Button fullWidth onClick={open}>
+        Hämta...
+      </Button>
+      <Modal opened={opened} onClose={close} title="Ladda ner" centered>
+        <GetGeoJson deviation={deviation} />
+      </Modal>
+    </>
+  );
+};
+
+function geoJsonBlobUrl(geometryOrFeature: string) {
+  const blob = new Blob([geometryOrFeature], { type: "application/geo+json" });
+  return URL.createObjectURL(blob);
+}
+
+const GetGeoJson: FC<{
+  deviation: Pick<DeviationRow, "id" | "suggested_geom" | "suggested_tags">;
+}> = ({ deviation }) => {
+  const suggested = geojson.readGeometry(deviation.suggested_geom);
+  const geom = suggested.transform("EPSG:3006", "EPSG:4326");
+
+  const geojsonUrl = geoJsonBlobUrl(geojson.writeGeometry(geom));
+  const blobName = `Avvikelse_${deviation.id}.geojson`;
+
+  const featureUrl = () => {
+    const feature = new Feature({
+      geometry: geom,
+    });
+    feature.setProperties(deviation.suggested_tags);
+    return geoJsonBlobUrl(geojson.writeFeature(feature));
+  };
+
+  return (
+    <Button.Group w="100%" orientation="vertical">
+      <Button fullWidth component="a" download={blobName} href={geojsonUrl} target="_blank">
+        Föreslagen geometri (GeoJSON)
+      </Button>
+      {deviation.suggested_tags ? (
+        <Button fullWidth component="a" variant="default" download={blobName} href={featureUrl()} target="_blank">
+          + taggar
+        </Button>
+      ) : (
+        <Button fullWidth disabled={true} data-disabled={true}>
+          + taggar
+        </Button>
+      )}
+    </Button.Group>
+  );
+};
+
 const ReportButton: FC<{ deviationId: number }> = ({ deviationId }) => {
   const [reportOpened, { open, close }] = useDisclosure(false);
   const reportForm = useForm({
@@ -333,6 +391,7 @@ const Page: FC<{
         <Button.Group w="100%">
           <OpenInID deviation={deviation} />
           <OpenInJOSMButton deviation={deviation} />
+          <Download deviation={deviation} />
         </Button.Group>
 
         <ReportButton deviationId={deviation.id} />

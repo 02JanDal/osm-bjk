@@ -136,9 +136,7 @@ const OpenInID: FC<{
 };
 
 const Download: FC<{
-  deviation: Pick<DeviationRow, "id" | "suggested_geom" | "suggested_tags"> & {
-    dataset: { provider: { name: string } | null; short_name: string } | null;
-  };
+  deviation: Pick<DeviationRow, "id" | "suggested_geom" | "suggested_tags">;
 }> = ({ deviation }) => {
   const [opened, { open, close }] = useDisclosure();
   return (
@@ -159,16 +157,13 @@ function geoJsonBlobUrl(geometryOrFeature: string) {
 }
 
 const GetGeoJson: FC<{
-  deviation: Pick<DeviationRow, "id" | "suggested_geom" | "suggested_tags"> & {
-    dataset: { provider: { name: string } | null; short_name: string } | null;
-  };
+  deviation: Pick<DeviationRow, "id" | "suggested_geom" | "suggested_tags">;
 }> = ({ deviation }) => {
   const suggested = geojson.readGeometry(deviation.suggested_geom);
-  console.log(suggested);
   const geom = suggested.transform("EPSG:3006", "EPSG:4326");
 
-  const geojson_url = geoJsonBlobUrl(geojson.writeGeometry(geom));
-  const blob_name = `Avvikelse_${deviation.id}.geojson`;
+  const geojsonUrl = geoJsonBlobUrl(geojson.writeGeometry(geom));
+  const blobName = `Avvikelse_${deviation.id}.geojson`;
 
   const featureUrl = () => {
     const feature = new Feature({
@@ -180,11 +175,11 @@ const GetGeoJson: FC<{
 
   return (
     <Button.Group w="100%" orientation="vertical">
-      <Button fullWidth component="a" download={blob_name} href={geojson_url} target="_blank">
+      <Button fullWidth component="a" download={blobName} href={geojsonUrl} target="_blank">
         Föreslagen geometri (GeoJSON)
       </Button>
       {deviation.suggested_tags ? (
-        <Button fullWidth component="a" variant="default" download={blob_name} href={featureUrl()} target="_blank">
+        <Button fullWidth component="a" variant="default" download={blobName} href={featureUrl()} target="_blank">
           + taggar
         </Button>
       ) : (

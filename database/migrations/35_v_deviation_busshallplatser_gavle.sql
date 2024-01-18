@@ -62,7 +62,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_busshallplatser_gavle AS
 			ELSE 'Följande taggar, härledda ur från Gävle kommuns data, saknas på busshållplatsen här'::text
 		END AS description,
 		 '' AS note
-	FROM upstream.v_match_busshallplatser_gavle
+	FROM upstream.mv_match_busshallplatser_gavle
 	WHERE osm_tags IS NULL OR upstream_tags IS NULL OR tag_diff(osm_tags, upstream_tags) <> '{}'::jsonb;
 
 CREATE OR REPLACE FUNCTION api.tile_match_busshallplatser_gavle(z integer, x integer, y integer)

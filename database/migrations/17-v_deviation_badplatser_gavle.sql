@@ -1,53 +1,79 @@
-CREATE OR REPLACE VIEW upstream.v_deviation_badplatser_gavle
- AS
- WITH gavle AS (
-         SELECT municipality.geom
-           FROM api.municipality
-          WHERE municipality.code = '2180'
-        ), osm_objs AS (
-         SELECT element.id,
-            element.type,
-            element.tags,
-            element.geom
-           FROM osm.element
-          WHERE element.tags->>'leisure' IN ('swimming_area', 'bathing_place') AND st_within(element.geom, ( SELECT gavle.geom
-                   FROM gavle))
-        ), gavle_objs AS (
-         SELECT item.id,
-            item.geometry,
-			jsonb_strip_nulls(jsonb_build_object(
-				'leisure', 'bathing_place',
-				'name', item.original_attributes->>'NAMN',
-				'website', item.original_attributes->>'URL',
-				'description:sv', TRIM(REGEXP_REPLACE(item.original_attributes->>'BESKR_KORT', 'Välkommen [^!]+!', '')),
-				'addr:street', TRIM(REGEXP_SUBSTR(item.original_attributes->>'GATUADRESS', '[^,0-9]+')),
-				'addr:housenumber', TRIM(REGEXP_SUBSTR(item.original_attributes->>'GATUADRESS', '[0-9]+[^,]*')),
-				'addr:city', TRIM((REGEXP_MATCH(item.original_attributes->>'GATUADRESS', ', (.*)'))[1])
-			)) as tags
-           FROM upstream.item
-          WHERE item.dataset_id = 4
-        )
- SELECT 4 AS dataset_id,
-    11 AS layer_id,
-    ARRAY[gavle_objs.id] AS upstream_item_ids,
-    CASE
-        WHEN osm_objs.id IS NULL THEN gavle_objs.geometry
-        ELSE NULL::geometry
-    END AS suggested_geom,
-    tag_diff(osm_objs.tags, gavle_objs.tags) AS suggested_tags,
-    osm_objs.id AS osm_element_id,
-    osm_objs.type AS osm_element_type,
-    CASE
-        WHEN osm_objs.id IS NULL THEN 'Badplats saknas'::text
-        ELSE 'Badplats saknar taggar'::text
-    END AS title,
-    CASE
-        WHEN osm_objs.id IS NULL THEN 'Enligt Gävle kommun ska det finnas en badplats här'::text
-        ELSE 'Följande taggar, härledda ur från Gävle kommuns data, saknas på badplatsen här'::text
-    END AS description,
-     '' AS note
-   FROM gavle_objs
-     LEFT JOIN osm_objs ON st_dwithin(gavle_objs.geometry, osm_objs.geom, 500::double precision)
-  WHERE osm_objs.tags IS NULL OR NOT osm_objs.tags @> gavle_objs.tags;
+CREATE OR REPLACE VIEW upstream.v_match_badplatser_gavle AS
+	WITH gavle AS (
+		SELECT municipality.geom FROM api.municipality WHERE municipality.code = '2180'
+	), osm_objs AS (
+		SELECT id, type, tags, geom FROM osm.element
+		WHERE element.tags->>'leisure' IN ('swimming_area', 'bathing_place') AND ST_Within(geom, (SELECT gavle.geom FROM gavle)) AND type IN ('n', 'a')
+	), ups_objs AS (
+	 SELECT ARRAY[item.id] AS id,
+		item.geometry,
+		jsonb_strip_nulls(jsonb_build_object(
+			'leisure', 'bathing_place',
+			'name', TRIM(item.original_attributes->>'NAMN'),
+			'website', TRIM(item.original_attributes->>'URL'),
+			'description:sv', TRIM(REGEXP_REPLACE(item.original_attributes->>'BESKR_KORT', 'Välkommen [^!]+!', '')),
+			'addr:street', TRIM(REGEXP_SUBSTR(item.original_attributes->>'GATUADRESS', '[^,0-9]+')),
+			'addr:housenumber', TRIM(REGEXP_SUBSTR(item.original_attributes->>'GATUADRESS', '[0-9]+[^,]*')),
+			'addr:city', TRIM((REGEXP_MATCH(item.original_attributes->>'GATUADRESS', ', (.*)'))[1])
+		)) as tags
+	   FROM upstream.item
+	  WHERE item.dataset_id = 4
+	)
+	SELECT DISTINCT ON (ups_objs.id)
+		ups_objs.id AS upstream_item_ids, ups_objs.tags AS upstream_tags, ups_objs.geometry AS upstream_geom,
+		osm_objs.id AS osm_element_id, osm_objs.type AS osm_element_type, osm_objs.tags AS osm_tags
+	FROM ups_objs
+	LEFT OUTER JOIN osm_objs ON match_condition(osm_objs.tags, ups_objs.tags, 'name', 250, 500, osm_objs.geom, ups_objs.geometry)
+	ORDER BY ups_objs.id, match_score(osm_objs.tags, ups_objs.tags, 'name', 250, 500, osm_objs.geom, ups_objs.geometry);
+CREATE MATERIALIZED VIEW upstream.mv_match_badplatser_gavle AS SELECT * FROM upstream.v_match_badplatser_gavle;
+ALTER TABLE upstream.mv_match_badplatser_gavle OWNER TO app;
 
-GRANT SELECT ON TABLE upstream.v_deviation_badplatser_gavle TO app;
+CREATE OR REPLACE VIEW upstream.v_deviation_badplatser_gavle AS
+	SELECT
+		4 AS dataset_id,
+		11 AS layer_id,
+		upstream_item_ids,
+		CASE
+			WHEN osm_element_id IS NULL THEN upstream_geom
+			ELSE NULL::geometry
+		END AS suggested_geom,
+		tag_diff(osm_tags, upstream_tags) AS suggested_tags,
+		osm_element_id,
+		osm_element_type,
+		CASE
+			WHEN osm_element_id IS NULL THEN 'Badplats saknas'::text
+			ELSE 'Badplats saknar taggar'::text
+		END AS title,
+		CASE
+			WHEN osm_element_id IS NULL THEN 'Enligt Gävle kommun ska det finnas en badplats här'::text
+			ELSE 'Följande taggar, härledda ur från Gävle kommuns data, saknas på badplatsen här'::text
+		END AS description,
+		 '' AS note
+	FROM upstream.mv_match_badplatser_gavle
+	WHERE osm_tags IS NULL OR upstream_tags IS NULL OR tag_diff(osm_tags, upstream_tags) <> '{}'::jsonb;
+
+CREATE OR REPLACE FUNCTION api.tile_match_badplatser_gavle(z integer, x integer, y integer)
+    RETURNS bytea
+    LANGUAGE 'sql'
+    STABLE PARALLEL SAFE
+    SECURITY DEFINER
+AS $$
+	WITH
+		bounds AS (SELECT ST_TileEnvelope(z, x, y) AS geom),
+		mvtgeom AS (
+			SELECT ST_AsMVTGeom(ST_Transform(CASE
+											 WHEN items.upstream_geom IS NOT NULL AND element.geom IS NOT NULL THEN ST_MakeLine(ST_Centroid(items.upstream_geom), ST_Centroid(element.geom))
+											 WHEN items.upstream_geom IS NOT NULL THEN ST_Centroid(items.upstream_geom)
+											 WHEN element.geom IS NOT NULL THEN ST_Centroid(element.geom)
+											 END, 3857), bounds.geom) AS geom,
+				items.upstream_tags::text AS upstream_tags,
+				CASE WHEN element.id IS NULL THEN 'not-in-osm'
+					 WHEN array_length(items.upstream_item_ids, 1) IS NULL THEN 'not-in-upstream'
+					 ELSE 'in-both' END AS state
+			FROM upstream.mv_match_badplatser_gavle items
+			LEFT OUTER JOIN osm.element ON items.osm_element_id = element.id AND items.osm_element_type = element.type
+			INNER JOIN bounds ON ST_Intersects(items.upstream_geom, ST_Transform(bounds.geom, 3006)) OR (element.id IS NOT NULL AND ST_Intersects(element.geom, ST_Transform(bounds.geom, 3006)))
+		)
+		SELECT ST_AsMVT(mvtgeom, 'default')
+		FROM mvtgeom;
+$$;

@@ -2,7 +2,7 @@ CREATE OR REPLACE VIEW upstream.v_match_preschools_scb AS
 	WITH osm_objs AS NOT MATERIALIZED (
 		SELECT id, type, tags, element.geom, municipality.code FROM osm.element
 		LEFT OUTER JOIN api.municipality ON ST_Within(element.geom, municipality.geom)
-		WHERE tags->>'amenity' = ANY(ARRAY['kindergarten', 'childcare'])
+		WHERE tags->>'amenity' = ANY(ARRAY['kindergarten', 'childcare']) AND type IN ('n', 'a')
 	), ups_objs AS NOT MATERIALIZED (
 		SELECT ARRAY[item.id] AS id,
 			item.geometry,
@@ -58,7 +58,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_preschools_scb AS
 			ELSE 'Följande taggar, härledda ur från SCBs register, saknas på förskolan här'::text
 		END AS description,
 		 '' AS note
-	FROM upstream.v_match_preschools_scb
+	FROM upstream.mv_match_preschools_scb
 	WHERE osm_tags IS NULL OR upstream_tags IS NULL OR tag_diff(osm_tags, upstream_tags) <> '{}'::jsonb;
 
 GRANT SELECT ON TABLE upstream.v_match_preschools_scb TO app;

@@ -27,6 +27,10 @@ CREATE INDEX IF NOT EXISTS element_tag_natural_idx ON osm.element USING btree ((
 CREATE INDEX IF NOT EXISTS element_tag_power_idx ON osm.element USING btree ((tags->>'power')) WHERE tags ? 'power';
 CREATE INDEX IF NOT EXISTS element_tag_service_idx ON osm.element USING btree ((tags->>'service')) WHERE tags ? 'service';
 CREATE INDEX IF NOT EXISTS element_tag_waterway_idx ON osm.element USING btree ((tags->>'waterway')) WHERE tags ? 'waterway';
+CREATE INDEX IF NOT EXISTS element_tag_leisure_idx ON osm.element USING btree ((tags->>'leisure')) WHERE tags ? 'leisure';
+CREATE INDEX IF NOT EXISTS element_tag_emergency_idx ON osm.element USING btree ((tags->>'emergency')) WHERE tags ? 'emergency';
+CREATE INDEX IF NOT EXISTS element_tag_tourism_idx ON osm.element USING btree ((tags->>'tourism')) WHERE tags ? 'tourism';
+CREATE INDEX IF NOT EXISTS element_tag_man_made_idx ON osm.element USING btree ((tags->>'man_made')) WHERE tags ? 'man_made';
 CREATE INDEX IF NOT EXISTS element_tags_idx ON osm.element USING gin (tags);
 CREATE INDEX IF NOT EXISTS element_way_id_idx ON osm.element USING btree (way_id);
 

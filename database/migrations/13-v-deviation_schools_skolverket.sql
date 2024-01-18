@@ -4,13 +4,13 @@ CREATE OR REPLACE VIEW upstream.v_match_schools_skolverket AS
 	CROSS JOIN LATERAL (
 		WITH osm_objs AS NOT MATERIALIZED (
 			SELECT id, type, tags, element.geom FROM osm.element
-			WHERE tags->>'amenity' = 'school' AND ST_Within(element.geom, municipality.geom)
+			WHERE tags->>'amenity' = 'school' AND ST_Within(element.geom, municipality.geom) AND type IN ('n', 'a')
 		), ups_objs AS NOT MATERIALIZED (
 			SELECT ARRAY[item.id] AS id,
 				item.geometry,
 				jsonb_strip_nulls(jsonb_build_object(
 					'amenity', 'school',
-					'name', (item.original_attributes->'SkolaNamn'),
+					'name', TRIM(item.original_attributes->>'SkolaNamn'),
 					'operator', public.fix_name((item.original_attributes->'Huvudman'->>'Namn')),
 					'operator:type', CASE
 						WHEN ((item.original_attributes->'Huvudman'->>'Typ') = ANY (ARRAY['Kommun'::text, 'Region'::text, 'Stat'::text])) THEN 'government'::text
@@ -19,13 +19,13 @@ CREATE OR REPLACE VIEW upstream.v_match_schools_skolverket AS
 						ELSE 'private'
 					END,
 					'ref:se:skolverket', item.original_attributes->>'Skolenhetskod',
-					'addr:housenumber', SUBSTRING((item.original_attributes->'Besoksadress'->>'Adress'), '[0-9]+.*$'),
-					'addr:street', SUBSTRING((item.original_attributes->'Besoksadress'->>'Adress'), '^[^0-9]+'),
-					'addr:city', item.original_attributes->'Besoksadress'->>'Ort',
-					'addr:postcode', item.original_attributes->'Besoksadress'->>'Postnr',
-					'contact:website', item.original_attributes->'Webbadress',
-					'contact:phone', item.original_attributes->'Telefon',
-					'contact:email', item.original_attributes->'Epost'
+					'addr:housenumber', TRIM(SUBSTRING((item.original_attributes->'Besoksadress'->>'Adress'), '[0-9]+.*$')),
+					'addr:street', TRIM(SUBSTRING((item.original_attributes->'Besoksadress'->>'Adress'), '^[^0-9]+')),
+					'addr:city', TRIM(item.original_attributes->'Besoksadress'->>'Ort'),
+					'addr:postcode', TRIM(item.original_attributes->'Besoksadress'->>'Postnr'),
+					'contact:website', TRIM(item.original_attributes->>'Webbadress'),
+					'contact:phone', fix_phone(item.original_attributes->>'Telefon'),
+					'contact:email', TRIM(item.original_attributes->>'Epost')
 				) || CASE
 					WHEN item.original_attributes->>'Inriktningstyp' = 'Waldorf' THEN jsonb_build_object('pedagogy', 'waldorf')
 					ELSE '{}'::jsonb

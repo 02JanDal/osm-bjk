@@ -3,9 +3,28 @@ create domain "text/xml" as pg_catalog.xml;
 CREATE OR REPLACE FUNCTION public.fix_name(original text) RETURNS text
     LANGUAGE sql IMMUTABLE STRICT LEAKPROOF PARALLEL SAFE
     AS $$
-	SELECT REGEXP_REPLACE(REGEXP_REPLACE(INITCAP(original), '\yKommun\y', 'kommun'), '\yAb\y', 'AB');
+	SELECT TRIM(REGEXP_REPLACE(REGEXP_REPLACE(INITCAP(original), '\yKommun\y', 'kommun'), '\yAb\y', 'AB'));
 $$;
 COMMENT ON FUNCTION public.fix_name(original text) IS 'Fix the casing of text';
+CREATE OR REPLACE FUNCTION public.fix_phone(original text) RETURNS text
+    LANGUAGE plpgsql IMMUTABLE STRICT LEAKPROOF PARALLEL SAFE
+    AS $$
+DECLARE
+	phone text;
+BEGIN
+	-- See https://wiki.openstreetmap.org/wiki/Key:phone#Usage for expected format
+	phone := REPLACE(REPLACE(original, ' ', ''), '-', '');
+	IF STARTS_WITH(phone, '+') THEN
+		phone := SUBSTRING(phone FROM 1 FOR 3) || ' ' || SUBSTRING(phone FROM 4);
+	ELSEIF STARTS_WITH(phone, '00') THEN
+		phone := '+' || SUBSTRING(phone FROM 3 FOR 2) || ' ' || SUBSTRING(original FROM 5);
+	ELSEIF STARTS_WITH(phone, '0') THEN
+		phone := '+46 ' || SUBSTRING(phone FROM 2);
+	END IF;
+	RETURN phone;
+END;
+$$;
+COMMENT ON FUNCTION public.fix_name(original text) IS 'Fix the format of phone numbers';
 
 CREATE OR REPLACE FUNCTION public.tag_diff(in_old jsonb, in_new jsonb) RETURNS jsonb
     LANGUAGE sql IMMUTABLE LEAKPROOF PARALLEL SAFE

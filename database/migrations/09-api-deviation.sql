@@ -19,12 +19,15 @@ CREATE TABLE IF NOT EXISTS api.deviation (
     upstream_item_ids BIGINT[] DEFAULT ARRAY[]::bigint[] NOT NULL
 );
 ALTER TABLE IF EXISTS api.deviation
+    DROP CONSTRAINT IF EXISTS uniq,
     ADD CONSTRAINT uniq UNIQUE NULLS NOT DISTINCT (dataset_id, layer_id, upstream_item_ids, osm_element_id, osm_element_type, title, view_name);
 
+
+DO $$ BEGIN
 CREATE TYPE upstream.calculated_deviation AS
 (
-	dataset_id integer,
-	layer_id integer,
+	dataset_id bigint,
+	layer_id bigint,
 	upstream_item_ids bigint[],
 	suggested_geom geometry,
 	suggested_tags jsonb,
@@ -34,6 +37,7 @@ CREATE TYPE upstream.calculated_deviation AS
 	description text,
 	note text
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
 
 -- endregion
 
@@ -134,7 +138,7 @@ CREATE INDEX IF NOT EXISTS deviation_municipality_code_idx ON api.deviation USIN
 CREATE INDEX IF NOT EXISTS deviation_osm_item_type_osm_item_id_idx ON api.deviation USING btree (osm_element_type, osm_element_id);
 CREATE INDEX IF NOT EXISTS deviation_suggested_geom_idx ON api.deviation USING gist (suggested_geom);
 CREATE INDEX IF NOT EXISTS deviation_title_idx ON api.deviation USING btree (title);
-CREATE INDEX deviation_upstream_item_ids_idx ON api.deviation USING gin (upstream_item_ids);
+CREATE INDEX IF NOT EXISTS deviation_upstream_item_ids_idx ON api.deviation USING gin (upstream_item_ids);
 
 -- endregion
 

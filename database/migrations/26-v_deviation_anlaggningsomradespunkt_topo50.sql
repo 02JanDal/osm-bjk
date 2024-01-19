@@ -119,6 +119,7 @@ CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomradespunkt_topo50 AS
 		WHERE item.dataset_id = 139 AND item.original_attributes->>'andamal' = 'Campingplats'
 		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
 	) AS q11;
+
 DROP MATERIALIZED VIEW IF EXISTS upstream.mv_match_anlaggningsomradespunkt_topo50 CASCADE;
 CREATE MATERIALIZED VIEW upstream.mv_match_anlaggningsomradespunkt_topo50 AS SELECT * FROM upstream.v_match_anlaggningsomradespunkt_topo50;
 ALTER TABLE upstream.mv_match_anlaggningsomradespunkt_topo50 OWNER TO app;

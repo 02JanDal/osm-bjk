@@ -80,13 +80,14 @@ BEGIN
                element.type AS osm_element_type,
                NULL::jsonb AS suggested_tags,
                'Removed'::text AS title,
-               ''::text AS description
+               ''::text AS description,
+               ''::text AS note
            FROM osm.element
                WHERE element.tags->>'amenity' = 'toilets' AND element.type IN ('n', 'a') AND NOT (EXISTS (SELECT 1 FROM upstream.item WHERE ST_DWithin(element.geom, item.geometry, 500)));
     CREATE OR REPLACE VIEW upstream.v_deviations AS SELECT * FROM upstream.v_deviation_test_dataset;
 
     ASSERT 6 = (SELECT COUNT(*) FROM upstream.v_deviation_test_dataset);
-    PERFORM upstream.sync_deviations('test_dataset'::text, dataset_id);
+    PERFORM upstream.sync_deviations('test_dataset'::text);
     ASSERT 6 = (SELECT COUNT(*) FROM api.deviation);
 
     DELETE FROM osm.node WHERE id = 45;

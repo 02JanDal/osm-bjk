@@ -49,6 +49,8 @@ CREATE OR REPLACE VIEW upstream.v_match_schools_skolverket AS
 		LEFT OUTER JOIN ups_objs ON match_condition(osm_objs.tags, ups_objs.tags, 'name', 'ref:se:skolverket', 50, 500, 1000, osm_objs.geom, ups_objs.geometry)
 		WHERE ups_objs.id IS NULL
 	) i;
+
+DROP MATERIALIZED VIEW IF EXISTS upstream.mv_match_schools_skolverket CASCADE;
 CREATE MATERIALIZED VIEW upstream.mv_match_schools_skolverket AS SELECT * FROM upstream.v_match_schools_skolverket;
 ALTER TABLE upstream.mv_match_schools_skolverket OWNER TO app;
 

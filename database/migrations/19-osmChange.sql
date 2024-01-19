@@ -10,7 +10,24 @@ CREATE OR REPLACE FUNCTION public.filtered_deviations(
     ROWS 1000
 
 AS $BODY$
-SELECT *, ROW_NUMBER() OVER () AS index
+SELECT
+  id,
+  layer_id,
+  dataset_id,
+  osm_element_id,
+  suggested_geom,
+  suggested_tags,
+  title,
+  description,
+  osm_element_type,
+  center,
+  municipality_code,
+  action,
+  action_at,
+  note,
+  view_name,
+  upstream_item_ids,
+  ROW_NUMBER() OVER () AS index
 FROM api.deviation
 WHERE (dataset_ids IS NULL OR dataset_id = ANY (dataset_ids))
 AND (municipalities IS NULL OR municipality_code = ANY (municipalities))

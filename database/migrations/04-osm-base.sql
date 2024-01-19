@@ -5,7 +5,7 @@ DO $$ BEGIN
     CREATE TYPE osm.object_type AS ENUM ('node', 'way', 'relation');
 EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
 
-CREATE FUNCTION osm.real_element_type(type osm.element_type, id bigint)
+CREATE OR REPLACE FUNCTION osm.real_element_type(type osm.element_type, id bigint)
     RETURNS osm.object_type
     LANGUAGE 'sql'
     IMMUTABLE STRICT PARALLEL SAFE

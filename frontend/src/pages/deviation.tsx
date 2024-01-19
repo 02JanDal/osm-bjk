@@ -139,6 +139,16 @@ const Download: FC<{
   deviation: Pick<DeviationRow, "id" | "suggested_geom" | "suggested_tags">;
 }> = ({ deviation }) => {
   const [opened, { open, close }] = useDisclosure();
+  /* NOTE: Move this logic into the modal if needed. For now it makes
+   * more sense to disable the modal instead of simply showing it with
+   * a bunch of disabled buttons.
+   */
+  if (!deviation.suggested_geom)
+    return (
+      <Button fullWidth disabled={true} data-disabled={true}>
+        Hämta...
+      </Button>
+    );
   return (
     <>
       <Button fullWidth onClick={open}>

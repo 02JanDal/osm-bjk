@@ -8,6 +8,7 @@ CREATE OR REPLACE FUNCTION public.fix_name(original text) RETURNS text
 	SELECT TRIM(REGEXP_REPLACE(REGEXP_REPLACE(INITCAP(original), '\yKommun\y', 'kommun'), '\yAb\y', 'AB'));
 $$;
 COMMENT ON FUNCTION public.fix_name(original text) IS 'Fix the casing of text';
+
 CREATE OR REPLACE FUNCTION public.fix_phone(original text) RETURNS text
     LANGUAGE plpgsql IMMUTABLE STRICT LEAKPROOF PARALLEL SAFE
     AS $$
@@ -26,7 +27,7 @@ BEGIN
 	RETURN phone;
 END;
 $$;
-COMMENT ON FUNCTION public.fix_name(original text) IS 'Fix the format of phone numbers';
+COMMENT ON FUNCTION public.fix_phone(original text) IS 'Fix the format of phone numbers';
 
 CREATE OR REPLACE FUNCTION public.tag_diff(in_old jsonb, in_new jsonb) RETURNS jsonb
     LANGUAGE sql IMMUTABLE LEAKPROOF PARALLEL SAFE

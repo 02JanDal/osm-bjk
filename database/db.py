@@ -37,7 +37,7 @@ def migrations():
 
 @contextmanager
 def profile(text: str):
-    print(text + "...", end="")
+    print(text + "...", end="", flush=True)
     start = time()
     yield
     end = time()

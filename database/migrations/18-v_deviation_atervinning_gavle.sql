@@ -50,6 +50,8 @@ CREATE OR REPLACE VIEW upstream.v_match_atervinning_gavle AS
 	FROM osm_objs
 	LEFT OUTER JOIN ups_objs ON match_condition(osm_objs.tags, ups_objs.tags, 'addr:street', 'addr:street', 'addr:housenumber', 250, 500, 1000, osm_objs.geom, ups_objs.geometry)
 	WHERE ups_objs.id IS NULL;
+
+DROP MATERIALIZED VIEW IF EXISTS upstream.mv_match_atervinning_gavle CASCADE;
 CREATE MATERIALIZED VIEW upstream.mv_match_atervinning_gavle AS SELECT * FROM upstream.v_match_atervinning_gavle;
 ALTER TABLE upstream.mv_match_atervinning_gavle OWNER TO app;
 

@@ -47,7 +47,18 @@ CREATE OR REPLACE FUNCTION upstream._dynamic_deviations_by_view_name(view_name t
     LANGUAGE plpgsql
     AS $$
 BEGIN
-	RETURN QUERY EXECUTE format('SELECT * FROM upstream.%I', 'v_deviation_' || view_name);
+        RETURN QUERY EXECUTE format('SELECT
+          dataset_id,
+          layer_id,
+          upstream_item_ids,
+          suggested_geom,
+          suggested_tags,
+          osm_element_id,
+          osm_element_type,
+          title,
+          description,
+          note
+        FROM upstream.%I', 'v_deviation_' || view_name);
 END;
 $$;
 
@@ -116,7 +127,7 @@ GRANT ALL ON FUNCTION upstream._dynamic_deviations_by_view_name(view_name text) 
 
 GRANT ALL ON FUNCTION upstream.recalculate_deviation(api.deviation) TO app;
 
-GRANT ALL ON FUNCTION upstream.sync_deviations(view_name text, dataset_id bigint) TO app;
+GRANT ALL ON FUNCTION upstream.sync_deviations(view_name text) TO app;
 
 -- region Triggers
 
@@ -163,7 +174,7 @@ DECLARE
 	IF d.id IS NOT NULL THEN
 		IF d.suggested_geom IS NULL AND d.suggested_tags IS NULL THEN
 			CALL api.mark_deviation_fixed_by(d, NEW);
-		ELSIF d.upstream_item_id IS NOT NULL THEN
+		ELSIF array_length(d.upstream_item_ids, 1) IS NOT NULL THEN
 			PERFORM upstream.recalculate_deviation(d);
 		END IF;
 	END IF;

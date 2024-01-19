@@ -1,4 +1,6 @@
-create domain "text/xml" as pg_catalog.xml;
+DO $$ BEGIN
+  CREATE DOMAIN "text/xml" AS pg_catalog.xml;
+EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
 
 CREATE OR REPLACE FUNCTION public.fix_name(original text) RETURNS text
     LANGUAGE sql IMMUTABLE STRICT LEAKPROOF PARALLEL SAFE

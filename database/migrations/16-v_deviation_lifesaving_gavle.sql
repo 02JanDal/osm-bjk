@@ -23,6 +23,8 @@ CREATE OR REPLACE VIEW upstream.v_match_lifesaving_gavle AS
 	FROM ups_objs
 	LEFT OUTER JOIN osm_objs ON match_condition(5, osm_objs.geom, ups_objs.geometry)
 	ORDER BY ups_objs.id, match_score(5, osm_objs.geom, ups_objs.geometry);
+
+DROP MATERIALIZED VIEW IF EXISTS upstream.mv_match_lifesaving_gavle CASCADE;
 CREATE MATERIALIZED VIEW upstream.mv_match_lifesaving_gavle AS SELECT * FROM upstream.v_match_lifesaving_gavle;
 ALTER TABLE upstream.mv_match_lifesaving_gavle OWNER TO app;
 

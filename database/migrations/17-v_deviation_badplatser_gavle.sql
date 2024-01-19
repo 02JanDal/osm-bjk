@@ -25,6 +25,8 @@ CREATE OR REPLACE VIEW upstream.v_match_badplatser_gavle AS
 	FROM ups_objs
 	LEFT OUTER JOIN osm_objs ON match_condition(osm_objs.tags, ups_objs.tags, 'name', 250, 500, osm_objs.geom, ups_objs.geometry)
 	ORDER BY ups_objs.id, match_score(osm_objs.tags, ups_objs.tags, 'name', 250, 500, osm_objs.geom, ups_objs.geometry);
+
+DROP MATERIALIZED VIEW IF EXISTS upstream.mv_match_badplatser_gavle CASCADE;
 CREATE MATERIALIZED VIEW upstream.mv_match_badplatser_gavle AS SELECT * FROM upstream.v_match_badplatser_gavle;
 ALTER TABLE upstream.mv_match_badplatser_gavle OWNER TO app;
 

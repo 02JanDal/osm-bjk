@@ -20,6 +20,8 @@ CREATE OR REPLACE VIEW upstream.v_match_historiskaskyltar_gavle AS
 	FROM ups_objs
 	LEFT OUTER JOIN osm_objs ON match_condition(50, osm_objs.geom, ups_objs.geometry)
 	ORDER BY ups_objs.id, match_score(50, osm_objs.geom, ups_objs.geometry);
+
+DROP MATERIALIZED VIEW IF EXISTS upstream.mv_match_historiskaskyltar_gavle CASCADE;
 CREATE MATERIALIZED VIEW upstream.mv_match_historiskaskyltar_gavle AS SELECT * FROM upstream.v_match_historiskaskyltar_gavle;
 ALTER TABLE upstream.mv_match_historiskaskyltar_gavle OWNER TO app;
 

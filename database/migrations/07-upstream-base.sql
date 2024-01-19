@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS upstream.dataset (
     url TEXT NOT NULL,
     license TEXT NOT NULL,
     fetched_at TIMESTAMPTZ,
+    view_name TEXT,
     CONSTRAINT dataset_provider_id_name_key UNIQUE (provider_id, name)
 );
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE upstream.dataset TO app;

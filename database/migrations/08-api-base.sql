@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS api.municipality_dataset
     municipality_code CHAR(4) NOT NULL REFERENCES api.municipality(code) ON DELETE RESTRICT,
     layer_id BIGINT REFERENCES api.layer(id) ON DELETE CASCADE,
     dataset_id BIGINT NOT NULL REFERENCES upstream.dataset(id),
-    dataset_type dataset_usage NOT NULL,
+    dataset_type api.dataset_usage NOT NULL,
     project_link text,
 	UNIQUE (municipality_code, dataset_id)
 );

@@ -41,6 +41,22 @@ VALUES
   ('contact:phone', 'phone', 'contact'),
   ('contact:website', 'website', 'contact');
 
+DO $$ BEGIN
+    CREATE TYPE public.new_tag_value_type AS (
+           replace boolean,
+           value text
+    );
+EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
+
+CREATE OR REPLACE FUNCTION public.new_tag_value(key text, new_value text, old_value text) RETURNS public.new_tag_value_type
+    LANGUAGE sql IMMUTABLE LEAKPROOF PARALLEL SAFE
+    AS $$
+SELECT
+  CASE WHEN new_value IS DISTINCT FROM old_value THEN (true, new_value)::public.new_tag_value_type
+       ELSE (false, null)::public.new_tag_value_type
+       END
+$$;
+
 CREATE OR REPLACE FUNCTION public.tag_diff(in_old jsonb, in_new jsonb) RETURNS jsonb
     LANGUAGE sql IMMUTABLE LEAKPROOF PARALLEL SAFE
     AS $$
@@ -93,12 +109,12 @@ canonical_old AS (
   LEFT OUTER JOIN aliases ON "from" = key
 )
 SELECT
-    COALESCE(JSONB_OBJECT_AGG(new.key, new.value), '{}'::jsonb)
+    COALESCE(JSONB_OBJECT_AGG(new.key, new_value.replace_with), '{}'::jsonb)
   FROM canonical_new AS new
   FULL OUTER JOIN canonical_old AS old ON new.key = old.key
+  CROSS JOIN LATERAL public.new_tag_value(new.key, new.value, old.value) new_value(replace, replace_with)
 WHERE
-  new.value IS DISTINCT FROM old.value AND
-  new.key IS NOT NULL
+  new.key IS NOT NULL AND new_value.replace
 $$;
 COMMENT ON FUNCTION public.tag_diff(in_old jsonb, in_new jsonb) IS 'Result only includes tags that are different or do not exist in in_old';
 

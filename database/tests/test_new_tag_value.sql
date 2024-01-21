@@ -18,6 +18,29 @@ SELECT test(
     )
 );
 
+-- contact:phone comparisons
+SELECT test(
+    'contact:phone with a distinct phone number should be replaced',
+    (true, '+46 12345678')::new_tag_value_type,
+    new_tag_value(
+        'contact:website',
+        '+46 12345678',
+        '+46 00000000'
+    )
+);
+
+-- NOTE: Here it might be useful to do some form of normalization at
+-- least by adding the country prefix, if desirable.
+SELECT test(
+    'contact:phone with an equivalent number should not be replaced',
+    (false, null)::new_tag_value_type,
+    new_tag_value(
+        'contact:phone',
+        '+46 12345678',
+        '012-34 56 78'
+    )
+);
+
 -- contact:website comparisons
 SELECT test(
     'contact:website with a distinct url should be replaced',

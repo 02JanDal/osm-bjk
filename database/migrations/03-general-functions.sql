@@ -48,11 +48,29 @@ DO $$ BEGIN
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
 
+CREATE OR REPLACE FUNCTION public.new_website(new_value text, old_value text) RETURNS boolean
+    LANGUAGE sql IMMUTABLE LEAKPROOF PARALLEL SAFE
+    AS $$
+SELECT
+  new_value IS DISTINCT FROM old_value
+  -- Do not replace https://example.com with http://example.com
+  AND NOT (
+    starts_with(new_value, 'http://') AND
+    starts_with(old_value, 'https://') AND
+    substring(new_value FROM 'http://(.*)') = substring(old_value FROM 'https://(.*)')
+  )
+$$;
+
 CREATE OR REPLACE FUNCTION public.new_tag_value(key text, new_value text, old_value text) RETURNS public.new_tag_value_type
     LANGUAGE sql IMMUTABLE LEAKPROOF PARALLEL SAFE
     AS $$
 SELECT
-  CASE WHEN new_value IS DISTINCT FROM old_value THEN (true, new_value)::public.new_tag_value_type
+  CASE WHEN key IN ('website', 'contact:website') THEN
+         CASE WHEN public.new_website(new_value, old_value) THEN (true, new_value)::public.new_tag_value_type
+              ELSE (false, null)::public.new_tag_value_type
+         END
+       -- Fallback, do a normal comparison.
+       WHEN new_value IS DISTINCT FROM old_value THEN (true, new_value)::public.new_tag_value_type
        ELSE (false, null)::public.new_tag_value_type
        END
 $$;

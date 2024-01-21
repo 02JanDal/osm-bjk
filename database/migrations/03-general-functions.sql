@@ -29,15 +29,76 @@ END;
 $$;
 COMMENT ON FUNCTION public.fix_phone(original text) IS 'Fix the format of phone numbers';
 
+CREATE TABLE IF NOT EXISTS public.tag_aliases (
+  preferred text NOT NULL,
+  alternative text NOT NULL,
+  category text NOT NULL
+);
+TRUNCATE TABLE public.tag_aliases;
+INSERT INTO public.tag_aliases (preferred, alternative, category)
+VALUES
+  ('contact:email', 'email', 'contact'),
+  ('contact:phone', 'phone', 'contact'),
+  ('contact:website', 'website', 'contact');
+
 CREATE OR REPLACE FUNCTION public.tag_diff(in_old jsonb, in_new jsonb) RETURNS jsonb
     LANGUAGE sql IMMUTABLE LEAKPROOF PARALLEL SAFE
     AS $$
+WITH new AS (
+  SELECT * FROM JSONB_EACH_TEXT(COALESCE(in_new, '{}'::jsonb))
+), old AS (
+  SELECT * FROM JSONB_EACH_TEXT(COALESCE(in_old, '{}'::jsonb))
+),
+-- Identify which variation the old object has for each category.
+category_picks AS (
+  SELECT min(choice) AS choice, category
+  FROM (SELECT 'preferred' as choice, category
+           FROM old JOIN public.tag_aliases ON old.key = preferred
+        UNION
+        SELECT 'alternative' as choice, category
+           FROM old JOIN public.tag_aliases ON old.key = alternative
+        ) AS recognized
+  GROUP BY category
+  HAVING COUNT(choice) = 1
+),
+-- Create a mapping from all keys in both columns of tag_aliases to
+-- the selection identified above.
+aliases AS (
+  SELECT
+    ta.preferred AS "from",
+    CASE WHEN cp IS NULL OR cp.choice = 'preferred' THEN ta.preferred
+         ELSE ta.alternative
+         END AS "to"
+  FROM tag_aliases AS ta
+  LEFT OUTER JOIN category_picks AS cp
+    ON ta.category = cp.category
+  UNION ALL
+  SELECT
+    ta.alternative AS "from",
+    CASE WHEN cp IS NULL OR cp.choice = 'preferred' THEN ta.preferred
+         ELSE ta.alternative
+         END AS "to"
+  FROM tag_aliases AS ta
+  LEFT OUTER JOIN category_picks AS cp
+    ON ta.category = cp.category
+),
+canonical_new AS (
+  SELECT COALESCE("to", key) AS key, value
+  FROM new
+  LEFT OUTER JOIN aliases ON "from" = key
+),
+canonical_old AS (
+  SELECT COALESCE("to", key) AS key, value
+  FROM old
+  LEFT OUTER JOIN aliases ON "from" = key
+)
 SELECT
     COALESCE(JSONB_OBJECT_AGG(new.key, new.value), '{}'::jsonb)
-  FROM JSONB_EACH_TEXT(COALESCE(in_new, '{}'::jsonb)) new
-  FULL OUTER JOIN JSONB_EACH_TEXT(COALESCE(in_old, '{}'::jsonb)) old ON new.key = old.key
+  FROM canonical_new AS new
+  FULL OUTER JOIN canonical_old AS old ON new.key = old.key
 WHERE
-  new.value IS DISTINCT FROM old.value AND new.key IS NOT NULL
+  new.value IS DISTINCT FROM old.value AND
+  new.key IS NOT NULL
 $$;
 COMMENT ON FUNCTION public.tag_diff(in_old jsonb, in_new jsonb) IS 'Result only includes tags that are different or do not exist in in_old';
 

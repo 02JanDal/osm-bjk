@@ -61,12 +61,23 @@ SELECT
   )
 $$;
 
+CREATE OR REPLACE FUNCTION public.new_phone(new_value text, old_value text) RETURNS boolean
+    LANGUAGE sql IMMUTABLE LEAKPROOF PARALLEL SAFE
+    AS $$
+SELECT
+  fix_phone(new_value) IS DISTINCT FROM fix_phone(old_value)
+$$;
+
 CREATE OR REPLACE FUNCTION public.new_tag_value(key text, new_value text, old_value text) RETURNS public.new_tag_value_type
     LANGUAGE sql IMMUTABLE LEAKPROOF PARALLEL SAFE
     AS $$
 SELECT
   CASE WHEN key IN ('website', 'contact:website') THEN
          CASE WHEN public.new_website(new_value, old_value) THEN (true, new_value)::public.new_tag_value_type
+              ELSE (false, null)::public.new_tag_value_type
+         END
+       WHEN key IN ('phone', 'contact:phone') THEN
+         CASE WHEN public.new_phone(new_value, old_value) THEN (true, new_value)::public.new_tag_value_type
               ELSE (false, null)::public.new_tag_value_type
          END
        -- Fallback, do a normal comparison.

@@ -29,12 +29,12 @@ END;
 $$;
 COMMENT ON FUNCTION public.fix_phone(original text) IS 'Fix the format of phone numbers';
 
-DROP TABLE IF EXISTS public.tag_aliases CASCADE;
-CREATE TABLE public.tag_aliases (
+CREATE TABLE IF NOT EXISTS public.tag_aliases (
   preferred text NOT NULL,
   alternative text NOT NULL,
   category text NOT NULL
 );
+TRUNCATE TABLE public.tag_aliases;
 INSERT INTO public.tag_aliases (preferred, alternative, category)
 VALUES
   ('contact:email', 'email', 'contact'),

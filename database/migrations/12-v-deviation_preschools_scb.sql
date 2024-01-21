@@ -6,11 +6,11 @@ CREATE OR REPLACE VIEW upstream.v_match_preschools_scb AS
 	), ups_objs AS NOT MATERIALIZED (
 		SELECT ARRAY[item.id] AS id,
 			item.geometry,
-			jsonb_build_object(
+			jsonb_strip_nulls(jsonb_build_object(
 				'amenity', 'kindergarten',
 				'name', fix_name((item.original_attributes->>'Firmabenämning')),
 				'operator', fix_name((item.original_attributes->>'Företagsnamn'))
-			) as tags,
+			)) as tags,
 			municipality.code
 		FROM upstream.item
 		LEFT OUTER JOIN api.municipality ON ST_Within(item.geometry, municipality.geom)

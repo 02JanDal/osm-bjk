@@ -1,3 +1,6 @@
+DROP VIEW IF EXISTS upstream.v_deviation_papperskorgar_gavle;
+DROP MATERIALIZED VIEW IF EXISTS upstream.mv_match_papperskorgar_gavle;
+
 CREATE OR REPLACE VIEW upstream.v_match_papperskorgar_gavle AS
 	WITH gavle AS (
 		SELECT municipality.geom FROM api.municipality WHERE municipality.code = '2180'
@@ -17,8 +20,8 @@ CREATE OR REPLACE VIEW upstream.v_match_papperskorgar_gavle AS
 		ups_objs.id AS upstream_item_ids, ups_objs.tags AS upstream_tags, ups_objs.geometry AS upstream_geom,
 		osm_objs.id AS osm_element_id, osm_objs.type AS osm_element_type, osm_objs.tags AS osm_tags
 	FROM ups_objs
-	LEFT OUTER JOIN osm_objs ON match_condition(50, osm_objs.geom, ups_objs.geometry)
-	ORDER BY ups_objs.id, match_score(50, osm_objs.geom, ups_objs.geometry);
+	LEFT OUTER JOIN osm_objs ON match_condition(25, osm_objs.geom, ups_objs.geometry)
+	ORDER BY ups_objs.id, match_score(25, osm_objs.geom, ups_objs.geometry);
 
 DROP MATERIALIZED VIEW IF EXISTS upstream.mv_match_papperskorgar_gavle CASCADE;
 CREATE MATERIALIZED VIEW upstream.mv_match_papperskorgar_gavle AS SELECT * FROM upstream.v_match_papperskorgar_gavle;

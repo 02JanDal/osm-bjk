@@ -5,7 +5,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
 CREATE OR REPLACE FUNCTION public.fix_name(original text) RETURNS text
     LANGUAGE sql IMMUTABLE STRICT LEAKPROOF PARALLEL SAFE
     AS $$
-	SELECT TRIM(REGEXP_REPLACE(REGEXP_REPLACE(INITCAP(original), '\yKommun\y', 'kommun'), '\yAb\y', 'AB'));
+	SELECT CASE WHEN TRIM(original) = '' THEN NULL ELSE TRIM(REGEXP_REPLACE(REGEXP_REPLACE(INITCAP(original), '\yKommun\y', 'kommun'), '\yAb\y', 'AB')) END;
 $$;
 COMMENT ON FUNCTION public.fix_name(original text) IS 'Fix the casing of text';
 

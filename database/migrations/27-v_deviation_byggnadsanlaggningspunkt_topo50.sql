@@ -1,22 +1,22 @@
 CREATE OR REPLACE VIEW upstream.v_match_byggnadsanlaggningspunkt_topo50 AS
 	SELECT * FROM (
-		SELECT DISTINCT ON (element.id)
+		SELECT DISTINCT ON (item.id)
 			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('man_made', 'mast') AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags
 		FROM upstream.item LEFT OUTER JOIN osm.element
 		ON ST_DWithin(item.geometry, element.geom, 250) AND element.tags ? 'man_made' AND element.tags->>'man_made' = 'mast'
 		WHERE item.dataset_id = 143 AND item.original_attributes->>'objekttyp' = 'Mast'
-		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
+		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) as q1
 	UNION ALL
 	SELECT * FROM (
-		SELECT DISTINCT ON (element.id)
+		SELECT DISTINCT ON (item.id)
 			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('man_made', 'chimney') AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags
 		FROM upstream.item LEFT OUTER JOIN osm.element
 		ON ST_DWithin(item.geometry, element.geom, 250) AND element.tags ? 'man_made' AND element.tags->>'man_made' = 'chimney'
 		WHERE item.dataset_id = 143 AND item.original_attributes->>'objekttyp' = 'Skorsten'
-		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
+		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) as q2;
 DROP MATERIALIZED VIEW IF EXISTS upstream.mv_match_byggnadsanlaggningspunkt_topo50 CASCADE;
 CREATE MATERIALIZED VIEW upstream.mv_match_byggnadsanlaggningspunkt_topo50 AS SELECT * FROM upstream.v_match_byggnadsanlaggningspunkt_topo50;

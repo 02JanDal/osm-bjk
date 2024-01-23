@@ -1,11 +1,11 @@
 CREATE OR REPLACE VIEW upstream.v_match_transformatoromrade_topo50 AS
-	SELECT DISTINCT ON (element.id)
+	SELECT DISTINCT ON (item.id)
 		ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('power', 'substation') AS upstream_tags, item.geometry AS upstream_geom,
 		element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags
 	FROM upstream.item LEFT OUTER JOIN osm.element
 	ON ST_DWithin(item.geometry, element.geom, 250) AND element.tags ? 'power' AND element.tags->>'power' = 'substation'
 	WHERE item.dataset_id = 146
-	ORDER BY element.id, ST_Distance(item.geometry, element.geom);
+	ORDER BY item.id, ST_Distance(item.geometry, element.geom);
 DROP MATERIALIZED VIEW IF EXISTS upstream.mv_match_transformatoromrade_topo50 CASCADE;
 CREATE MATERIALIZED VIEW upstream.mv_match_transformatoromrade_topo50 AS SELECT * FROM upstream.v_match_transformatoromrade_topo50;
 ALTER TABLE upstream.mv_match_transformatoromrade_topo50 OWNER TO app;

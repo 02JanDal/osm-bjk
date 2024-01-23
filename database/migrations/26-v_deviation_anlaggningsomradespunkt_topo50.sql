@@ -1,123 +1,123 @@
 CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomradespunkt_topo50 AS
 	SELECT * FROM (
-		SELECT DISTINCT ON (element.id)
+		SELECT DISTINCT ON (item.id)
 			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'sports_centre') AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'Kan även vara en `leisure=stadium`, `leisure=pitch` eller `leisure=sports_hall`, jämför med flygbild eller andra källor' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
 		ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags->>'leisure' IN ('stadium', 'pitch', 'sports_centre', 'sports_hall')
 		WHERE item.dataset_id = 139 AND item.original_attributes->>'andamal' = 'Idrottsanläggning'
-		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
+		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) AS q1
 	UNION ALL
 	SELECT * FROM (
-		SELECT DISTINCT ON (element.id)
+		SELECT DISTINCT ON (item.id)
 			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'pitch', 'sport', 'shooting') AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
 		ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags->>'leisure' = 'pitch' AND element.tags->>'sport' = 'shooting'
 		WHERE item.dataset_id = 139 AND item.original_attributes->>'andamal' IN ('Skjutbana, mindre', 'Skjutbana')
-		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
+		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) AS q2
 	UNION ALL
 	SELECT * FROM (
-		SELECT DISTINCT ON (element.id)
+		SELECT DISTINCT ON (item.id)
 			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'bathing_place') AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
 		ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags->>'leisure' IN ('bathing_place', 'swimming_area')
 		WHERE item.dataset_id = 139 AND item.original_attributes->>'andamal' = 'Badplats'
-		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
+		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) AS q3
 	UNION ALL
 	SELECT * FROM (
-		SELECT DISTINCT ON (element.id)
+		SELECT DISTINCT ON (item.id)
 			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'track', 'sport', 'horse_racing') AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
 		ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags->>'leisure' IN ('track', 'sports_centre', 'pitch') AND element.tags->>'sport' IN ('horse_racing', 'equestrian')
 		WHERE item.dataset_id = 139 AND item.original_attributes->>'andamal' IN ('Travbana', 'Galoppbana')
-		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
+		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) AS q4
 	UNION ALL
 	SELECT * FROM (
-		SELECT DISTINCT ON (element.id)
+		SELECT DISTINCT ON (item.id)
 			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('emergency', 'water_rescue') AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
 		ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags->>'emergency' IN ('water_rescue', 'rescue_station')
 		WHERE item.dataset_id = 139 AND item.original_attributes->>'andamal' = 'Sjöräddningsstation'
-		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
+		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) AS q5
 	UNION ALL
 	SELECT * FROM (
-		SELECT DISTINCT ON (element.id)
+		SELECT DISTINCT ON (item.id)
 			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'marina') AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
 		ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags->>'leisure' = 'marina'
 		WHERE item.dataset_id = 139 AND item.original_attributes->>'andamal' = 'Småbåtshamn'
-		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
+		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) AS q6
 	UNION ALL
 	SELECT * FROM (
-		SELECT DISTINCT ON (element.id)
+		SELECT DISTINCT ON (item.id)
 			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'marina', 'mooring', 'guest') AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
 		ON ST_DWithin(item.geometry, element.geom, 500) AND (element.tags->>'man_made' IN ('pier', 'quay') OR element.tags->>'leisure' = 'marina') AND element.tags->>'mooring' LIKE '%guest%'
 		WHERE item.dataset_id = 139 AND item.original_attributes->>'andamal' = 'Gästhamn'
-		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
+		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) AS q7
 	UNION ALL
 	SELECT * FROM (
-		SELECT DISTINCT ON (element.id)
+		SELECT DISTINCT ON (item.id)
 			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'pitch') AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
 		ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags->>'leisure' = 'pitch'
 		WHERE item.dataset_id = 139 AND item.original_attributes->>'andamal' = 'Bollplan'
-		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
+		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) AS q8
 	UNION ALL
 	SELECT * FROM (
-		SELECT DISTINCT ON (element.id)
+		SELECT DISTINCT ON (item.id)
 			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'pitch', 'sport', 'soccer') AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
 		ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags->>'leisure' = 'pitch' AND element.tags->>'sport' = 'soccer'
 		WHERE item.dataset_id = 139 AND item.original_attributes->>'andamal' = 'Fotbollsplan'
-		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
+		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) AS q9
 	UNION ALL
 	SELECT * FROM (
-		SELECT DISTINCT ON (element.id)
+		SELECT DISTINCT ON (item.id)
 			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('industrial', 'port') AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'Se även taggen `harbour=*`' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
 		ON ST_DWithin(item.geometry, element.geom, 500) AND ((element.tags ? 'industrial' AND element.tags->>'industrial' = 'port') OR element.tags ? 'harbour')
 		WHERE item.dataset_id = 139 AND item.original_attributes->>'andamal' = 'Hamn'
-		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
+		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) AS q10
 	UNION ALL
 	SELECT * FROM (
-		SELECT DISTINCT ON (element.id)
+		SELECT DISTINCT ON (item.id)
 			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('tourism', 'camp_site') AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
 		ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags->>'tourism' IN ('camp_site', 'caravan_site')
 		WHERE item.dataset_id = 139 AND item.original_attributes->>'andamal' = 'Campingplats'
-		ORDER BY element.id, ST_Distance(item.geometry, element.geom)
+		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) AS q11;
 
 DROP MATERIALIZED VIEW IF EXISTS upstream.mv_match_anlaggningsomradespunkt_topo50 CASCADE;

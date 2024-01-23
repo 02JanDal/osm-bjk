@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.tag_aliases (
   alternative text NOT NULL,
   category text NOT NULL
 );
+GRANT SELECT ON public.tag_aliases TO app;
 TRUNCATE TABLE public.tag_aliases;
 INSERT INTO public.tag_aliases (preferred, alternative, category)
 VALUES

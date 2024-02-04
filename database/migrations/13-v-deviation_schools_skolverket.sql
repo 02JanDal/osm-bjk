@@ -4,32 +4,37 @@ CREATE OR REPLACE VIEW upstream.v_match_schools_skolverket AS
 	CROSS JOIN LATERAL (
 		WITH osm_objs AS NOT MATERIALIZED (
 			SELECT id, type, tags, element.geom FROM osm.element
-			WHERE tags->>'amenity' = 'school' AND ST_Within(element.geom, municipality.geom) AND type IN ('n', 'a')
+			WHERE (tags->>'amenity' = 'school' OR tags->>'disused:amenity' = 'school' OR tags->>'planned:amenity' = 'school') AND ST_Within(element.geom, municipality.geom) AND type IN ('n', 'a')
 		), ups_objs AS NOT MATERIALIZED (
 			SELECT ARRAY[item.id] AS id,
 				item.geometry,
-				jsonb_strip_nulls(jsonb_build_object(
-					'amenity', 'school',
-					'name', TRIM(item.original_attributes->>'SkolaNamn'),
-					'operator', public.fix_name((item.original_attributes->'Huvudman'->>'Namn')),
-					'operator:type', CASE
-						WHEN ((item.original_attributes->'Huvudman'->>'Typ') = ANY (ARRAY['Kommun'::text, 'Region'::text, 'Stat'::text])) THEN 'government'::text
-						WHEN (((item.original_attributes->'Huvudman'->>'Namn') ~~* '%förening%') OR ((item.original_attributes->'Huvudman'->>'Namn') ~~* '%ek för%')) THEN 'cooperative'
-						WHEN ((item.original_attributes->'Huvudman'->>'Namn') ~~* '%stiftelse%') THEN 'ngo'
-						ELSE 'private'
-					END,
-					'ref:se:skolverket', item.original_attributes->>'Skolenhetskod',
-					'addr:housenumber', TRIM(SUBSTRING((item.original_attributes->'Besoksadress'->>'Adress'), '[0-9]+.*$')),
-					'addr:street', TRIM(SUBSTRING((item.original_attributes->'Besoksadress'->>'Adress'), '^[^0-9]+')),
-					'addr:city', TRIM(item.original_attributes->'Besoksadress'->>'Ort'),
-					'addr:postcode', TRIM(item.original_attributes->'Besoksadress'->>'Postnr'),
-					'contact:website', TRIM(item.original_attributes->>'Webbadress'),
-					'contact:phone', fix_phone(item.original_attributes->>'Telefon'),
-					'contact:email', TRIM(item.original_attributes->>'Epost')
-				) || CASE
-					WHEN item.original_attributes->>'Inriktningstyp' = 'Waldorf' THEN jsonb_build_object('pedagogy', 'waldorf')
-					ELSE '{}'::jsonb
-				END) as tags
+                CASE WHEN item.original_attributes->>'Status' = 'Aktiv' THEN jsonb_build_object('amenity', 'school', 'disused:amenity', null, 'planned:amenity', null)
+                    WHEN item.original_attributes->>'Status' = 'Vilande' THEN jsonb_build_object('disused:amenity', 'school', 'end_date', item.original_attributes->>'Nedlaggningsdatum', 'amenity', null, 'planned:amenity', null)
+                    WHEN item.original_attributes->>'Status' = 'Planerad' THEN jsonb_build_object('planned:amenity', 'school', 'opening_date', item.original_attributes->>'Startdatum', 'amenity', null, 'disused:amenity', null)
+                    END ||
+				jsonb_strip_nulls(
+                           jsonb_build_object(
+                                   'name', TRIM(item.original_attributes->>'SkolaNamn'),
+                                   'operator', public.fix_name((item.original_attributes->'Huvudman'->>'Namn')),
+                                   'operator:type', CASE
+                                       WHEN ((item.original_attributes->'Huvudman'->>'Typ') = ANY (ARRAY['Kommun'::text, 'Region'::text, 'Stat'::text])) THEN 'government'::text
+                                       WHEN (((item.original_attributes->'Huvudman'->>'Namn') ~~* '%förening%') OR ((item.original_attributes->'Huvudman'->>'Namn') ~~* '%ek för%')) THEN 'cooperative'
+                                       WHEN ((item.original_attributes->'Huvudman'->>'Namn') ~~* '%stiftelse%') THEN 'ngo'
+                                       ELSE 'private'
+                                   END,
+                                   'ref:se:skolverket', item.original_attributes->>'Skolenhetskod',
+                                   'addr:housenumber', TRIM(SUBSTRING((item.original_attributes->'Besoksadress'->>'Adress'), '[0-9]+.*$')),
+                                   'addr:street', TRIM(SUBSTRING((item.original_attributes->'Besoksadress'->>'Adress'), '^[^0-9]+')),
+                                   'addr:city', TRIM(item.original_attributes->'Besoksadress'->>'Ort'),
+                                   'addr:postcode', TRIM(item.original_attributes->'Besoksadress'->>'Postnr'),
+                                   'contact:website', TRIM(item.original_attributes->>'Webbadress'),
+                                   'contact:phone', fix_phone(item.original_attributes->>'Telefon'),
+                                   'contact:email', TRIM(item.original_attributes->>'Epost')
+                           ) || CASE
+                               WHEN item.original_attributes->>'Inriktningstyp' = 'Waldorf' THEN jsonb_build_object('pedagogy', 'waldorf')
+                               ELSE '{}'::jsonb
+                               END
+				) as tags
 			FROM upstream.item
 			WHERE item.dataset_id = 109 AND item.original_attributes->'Kommun'->>'Kommunkod' = municipality.code
 		)
@@ -78,7 +83,9 @@ CREATE OR REPLACE VIEW upstream.v_deviation_schools_skolverket AS
 		END AS description,
 		 '' AS note
 	FROM upstream.mv_match_schools_skolverket
-	WHERE osm_tags IS NULL OR upstream_tags IS NULL OR tag_diff(osm_tags, upstream_tags) <> '{}'::jsonb;
+	WHERE (osm_tags IS NULL OR upstream_tags IS NULL OR tag_diff(osm_tags, upstream_tags) <> '{}'::jsonb)
+	  -- don't suggest adding a disused school
+	  AND NOT (upstream_tags ? 'disused:amenity' AND osm_element_id IS NULL);
 
 GRANT SELECT ON TABLE upstream.v_match_schools_skolverket TO app;
 GRANT SELECT ON TABLE upstream.v_deviation_schools_skolverket TO app;

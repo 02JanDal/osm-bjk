@@ -2,6 +2,13 @@ DO $$ BEGIN
   CREATE DOMAIN "text/xml" AS pg_catalog.xml;
 EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
 
+CREATE OR REPLACE FUNCTION public.count_jsonb_keys(obj jsonb) RETURNS int
+    LANGUAGE sql IMMUTABLE LEAKPROOF PARALLEL SAFE
+    AS $$
+SELECT COUNT(*) FROM (SELECT jsonb_object_keys(obj)) keys;
+$$;
+COMMENT ON FUNCTION public.count_jsonb_keys(obj jsonb) IS 'Counts the number of keys in a JSONB object';
+
 CREATE OR REPLACE FUNCTION public.fix_name(original text) RETURNS text
     LANGUAGE sql IMMUTABLE STRICT LEAKPROOF PARALLEL SAFE
     AS $$
@@ -147,6 +154,13 @@ WHERE
   new.key IS NOT NULL AND new_value.replace
 $$;
 COMMENT ON FUNCTION public.tag_diff(in_old jsonb, in_new jsonb) IS 'Result only includes tags that are different or do not exist in in_old';
+
+CREATE OR REPLACE FUNCTION public.tag_alternatives(alternatives jsonb[], constants jsonb) RETURNS jsonb
+    LANGUAGE sql IMMUTABLE LEAKPROOF PARALLEL SAFE
+    AS $$
+SELECT jsonb_agg(jsonb_strip_nulls(constants || alt)) FROM unnest(alternatives) alt;
+$$;
+COMMENT ON FUNCTION public.tag_alternatives(alternatives jsonb[], constants jsonb) IS 'Produce a JSON array of alternative tagging schemes';
 
 CREATE OR REPLACE FUNCTION public.match_condition(tags_a jsonb, tags_b jsonb, name_key text, ref_key text,
 												  other_distance real, name_distance real, ref_distance real, geom_a geometry, geom_b geometry)

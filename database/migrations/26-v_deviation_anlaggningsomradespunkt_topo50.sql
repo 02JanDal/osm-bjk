@@ -1,7 +1,7 @@
 CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomradespunkt_topo50 AS
 	SELECT * FROM (
 		SELECT DISTINCT ON (item.id)
-			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'sports_centre') AS upstream_tags, item.geometry AS upstream_geom,
+			ARRAY[item.id] AS upstream_item_ids, tag_alternatives(ARRAY[jsonb_build_object('leisure', 'sports_centre'), jsonb_build_object('leisure', 'stadium'), jsonb_build_object('leisure', 'pitch'), jsonb_build_object('leisure', 'sports_hall')], jsonb_build_object()) AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'Kan även vara en `leisure=stadium`, `leisure=pitch` eller `leisure=sports_hall`, jämför med flygbild eller andra källor' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
@@ -12,7 +12,7 @@ CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomradespunkt_topo50 AS
 	UNION ALL
 	SELECT * FROM (
 		SELECT DISTINCT ON (item.id)
-			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'pitch', 'sport', 'shooting') AS upstream_tags, item.geometry AS upstream_geom,
+			ARRAY[item.id] AS upstream_item_ids, jsonb_build_array(jsonb_build_object('leisure', 'pitch', 'sport', 'shooting')) AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
@@ -23,7 +23,7 @@ CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomradespunkt_topo50 AS
 	UNION ALL
 	SELECT * FROM (
 		SELECT DISTINCT ON (item.id)
-			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'bathing_place') AS upstream_tags, item.geometry AS upstream_geom,
+			ARRAY[item.id] AS upstream_item_ids, tag_alternatives(ARRAY[jsonb_build_object('leisure', 'bathing_place'), jsonb_build_object('leisure', 'swimming_area')], jsonb_build_object()) AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
@@ -34,7 +34,7 @@ CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomradespunkt_topo50 AS
 	UNION ALL
 	SELECT * FROM (
 		SELECT DISTINCT ON (item.id)
-			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'track', 'sport', 'horse_racing') AS upstream_tags, item.geometry AS upstream_geom,
+			ARRAY[item.id] AS upstream_item_ids, tag_alternatives(ARRAY[jsonb_build_object('leisure', 'track'), jsonb_build_object('leisure', 'sports_centre'), jsonb_build_object('leisure', 'pitch')], jsonb_build_object('sport', 'horse_racing')) AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
@@ -45,7 +45,7 @@ CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomradespunkt_topo50 AS
 	UNION ALL
 	SELECT * FROM (
 		SELECT DISTINCT ON (item.id)
-			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('emergency', 'water_rescue') AS upstream_tags, item.geometry AS upstream_geom,
+			ARRAY[item.id] AS upstream_item_ids, tag_alternatives(ARRAY[jsonb_build_object('emergency', 'water_rescue'), jsonb_build_object('emergency', 'rescue_station')], jsonb_build_object()) AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
@@ -56,7 +56,7 @@ CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomradespunkt_topo50 AS
 	UNION ALL
 	SELECT * FROM (
 		SELECT DISTINCT ON (item.id)
-			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'marina') AS upstream_tags, item.geometry AS upstream_geom,
+			ARRAY[item.id] AS upstream_item_ids, jsonb_build_array(jsonb_build_object('leisure', 'marina')) AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
@@ -67,7 +67,7 @@ CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomradespunkt_topo50 AS
 	UNION ALL
 	SELECT * FROM (
 		SELECT DISTINCT ON (item.id)
-			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'marina', 'mooring', 'guest') AS upstream_tags, item.geometry AS upstream_geom,
+			ARRAY[item.id] AS upstream_item_ids, tag_alternatives(ARRAY[jsonb_build_object('leisure', 'marina'), jsonb_build_object('man_made', 'pier'), jsonb_build_object('man_made', 'quay')], jsonb_build_object('mooring', 'guest')) AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
@@ -78,7 +78,7 @@ CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomradespunkt_topo50 AS
 	UNION ALL
 	SELECT * FROM (
 		SELECT DISTINCT ON (item.id)
-			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'pitch') AS upstream_tags, item.geometry AS upstream_geom,
+			ARRAY[item.id] AS upstream_item_ids, jsonb_build_array(jsonb_build_object('leisure', 'pitch')) AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
@@ -89,7 +89,7 @@ CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomradespunkt_topo50 AS
 	UNION ALL
 	SELECT * FROM (
 		SELECT DISTINCT ON (item.id)
-			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('leisure', 'pitch', 'sport', 'soccer') AS upstream_tags, item.geometry AS upstream_geom,
+			ARRAY[item.id] AS upstream_item_ids, jsonb_build_array(jsonb_build_object('leisure', 'pitch', 'sport', 'soccer')) AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
@@ -100,7 +100,7 @@ CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomradespunkt_topo50 AS
 	UNION ALL
 	SELECT * FROM (
 		SELECT DISTINCT ON (item.id)
-			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('industrial', 'port') AS upstream_tags, item.geometry AS upstream_geom,
+			ARRAY[item.id] AS upstream_item_ids, jsonb_build_array(jsonb_build_object('industrial', 'port')) AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'Se även taggen `harbour=*`' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
@@ -111,7 +111,7 @@ CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomradespunkt_topo50 AS
 	UNION ALL
 	SELECT * FROM (
 		SELECT DISTINCT ON (item.id)
-			ARRAY[item.id] AS upstream_item_ids, jsonb_build_object('tourism', 'camp_site') AS upstream_tags, item.geometry AS upstream_geom,
+			ARRAY[item.id] AS upstream_item_ids, tag_alternatives(ARRAY[jsonb_build_object('tourism', 'camp_site'), jsonb_build_object('tourism', 'caravan_site')], jsonb_build_object()) AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
 			'' AS note, item.original_attributes->>'andamal' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
@@ -126,7 +126,8 @@ ALTER TABLE upstream.mv_match_anlaggningsomradespunkt_topo50 OWNER TO app;
 
 DROP VIEW IF EXISTS upstream.v_deviation_anlaggningsomradespunkt_topo50;
 CREATE OR REPLACE VIEW upstream.v_deviation_anlaggningsomradespunkt_topo50 AS
-	SELECT
+	SELECT *
+    FROM (SELECT DISTINCT ON (match_id)
 		139 AS dataset_id,
 		CASE WHEN andamal IN ('Campingplats', 'Gästhamn', 'Småbåtshamn', 'Sjöräddningsstation') THEN 18
 			 WHEN andamal IN ('Hamn') THEN 19
@@ -138,7 +139,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_anlaggningsomradespunkt_topo50 AS
 			WHEN osm_element_id IS NULL THEN upstream_geom
 			ELSE NULL::geometry
 		END AS suggested_geom,
-		tag_diff(osm_tags, upstream_tags) AS suggested_tags,
+		tag_diff(osm_tags, ups_tags) AS suggested_tags,
 		osm_element_id,
 		osm_element_type,
 		CASE
@@ -150,8 +151,10 @@ CREATE OR REPLACE VIEW upstream.v_deviation_anlaggningsomradespunkt_topo50 AS
 			ELSE 'Följande taggar, härledda ur Lantmäteriets 1:50 000 karta, saknas här'
 		END AS description,
 		 '' AS note
-	FROM upstream.mv_match_anlaggningsomradespunkt_topo50
-	WHERE osm_tags IS NULL OR upstream_tags IS NULL OR tag_diff(osm_tags, upstream_tags) <> '{}'::jsonb;
+	FROM (SELECT ROW_NUMBER() OVER () AS match_id, * FROM upstream.mv_match_anlaggningsomradespunkt_topo50) sub
+	LEFT JOIN LATERAL jsonb_array_elements(upstream_tags) ups_tags ON true
+    ORDER BY match_id, count_jsonb_keys(tag_diff(osm_tags, ups_tags)) ASC) sub
+    WHERE osm_element_id IS NULL OR suggested_tags <> '{}'::jsonb;
 
 CREATE OR REPLACE FUNCTION api.tile_match_anlaggningsomradespunkt_topo50(z integer, x integer, y integer)
     RETURNS bytea

@@ -4,13 +4,16 @@ CREATE OR REPLACE VIEW upstream.v_match_preschools_scb AS
 		LEFT OUTER JOIN api.municipality ON ST_Within(element.geom, municipality.geom)
 		WHERE tags->>'amenity' = ANY(ARRAY['kindergarten', 'childcare']) AND type IN ('n', 'a')
 	), ups_objs AS NOT MATERIALIZED (
-		SELECT ARRAY[item.id] AS id,
+		SELECT
+			ARRAY[item.id] AS id,
 			item.geometry,
-			jsonb_strip_nulls(jsonb_build_object(
-				'amenity', 'kindergarten',
-				'name', fix_name((item.original_attributes->>'Firmabenämning')),
-				'operator', fix_name((item.original_attributes->>'Företagsnamn'))
-			)) as tags,
+			tag_alternatives(
+				ARRAY[jsonb_build_object('amenity', 'kindergarten'), jsonb_build_object('amenity', 'childcare')],
+				jsonb_build_object(
+					'amenity', 'kindergarten',
+					'name', fix_name((item.original_attributes->>'Firmabenämning')),
+					'operator', fix_name((item.original_attributes->>'Företagsnamn'))
+				)) as tags,
 			municipality.code
 		FROM upstream.item
 		LEFT OUTER JOIN api.municipality ON ST_Within(item.geometry, municipality.geom)
@@ -38,7 +41,8 @@ CREATE MATERIALIZED VIEW upstream.mv_match_preschools_scb AS SELECT * FROM upstr
 ALTER TABLE upstream.mv_match_preschools_scb OWNER TO app;
 
 CREATE OR REPLACE VIEW upstream.v_deviation_preschools_scb AS
-	SELECT
+	SELECT *
+    FROM (SELECT DISTINCT ON (match_id)
 		110 AS dataset_id,
 		15 AS layer_id,
 		upstream_item_ids,
@@ -46,7 +50,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_preschools_scb AS
 			WHEN osm_element_id IS NULL THEN upstream_geom
 			ELSE NULL::geometry
 		END AS suggested_geom,
-		tag_diff(osm_tags, upstream_tags) AS suggested_tags,
+		tag_diff(osm_tags, ups_tags) AS suggested_tags,
 		osm_element_id,
 		osm_element_type,
 		CASE
@@ -60,8 +64,10 @@ CREATE OR REPLACE VIEW upstream.v_deviation_preschools_scb AS
 			ELSE 'Följande taggar, härledda ur från SCBs register, saknas på förskolan här'::text
 		END AS description,
 		 '' AS note
-	FROM upstream.mv_match_preschools_scb
-	WHERE osm_tags IS NULL OR upstream_tags IS NULL OR tag_diff(osm_tags, upstream_tags) <> '{}'::jsonb;
+	FROM (SELECT ROW_NUMBER() OVER () AS match_id, * FROM upstream.mv_match_preschools_scb) sub
+	LEFT JOIN LATERAL jsonb_array_elements(upstream_tags) ups_tags ON true
+    ORDER BY match_id, count_jsonb_keys(tag_diff(osm_tags, ups_tags)) ASC) sub
+    WHERE osm_element_id IS NULL OR suggested_tags <> '{}'::jsonb;
 
 GRANT SELECT ON TABLE upstream.v_match_preschools_scb TO app;
 GRANT SELECT ON TABLE upstream.v_deviation_preschools_scb TO app;

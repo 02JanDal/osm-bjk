@@ -5,19 +5,21 @@ CREATE OR REPLACE VIEW upstream.v_match_badplatser_gavle AS
 		SELECT id, type, tags, geom FROM osm.element
 		WHERE element.tags->>'leisure' IN ('swimming_area', 'bathing_place') AND ST_Within(geom, (SELECT gavle.geom FROM gavle)) AND type IN ('n', 'a')
 	), ups_objs AS (
-	 SELECT ARRAY[item.id] AS id,
-		item.geometry,
-		jsonb_strip_nulls(jsonb_build_object(
-			'leisure', 'bathing_place',
-			'name', TRIM(item.original_attributes->>'NAMN'),
-			'website', TRIM(item.original_attributes->>'URL'),
-			'description:sv', TRIM(REGEXP_REPLACE(item.original_attributes->>'BESKR_KORT', 'Välkommen [^!]+!', '')),
-			'addr:street', TRIM(REGEXP_SUBSTR(item.original_attributes->>'GATUADRESS', '[^,0-9]+')),
-			'addr:housenumber', TRIM(REGEXP_SUBSTR(item.original_attributes->>'GATUADRESS', '[0-9]+[^,]*')),
-			'addr:city', TRIM((REGEXP_MATCH(item.original_attributes->>'GATUADRESS', ', (.*)'))[1])
-		)) as tags
-	   FROM upstream.item
-	  WHERE item.dataset_id = 4
+	 SELECT
+	     ARRAY[item.id] AS id,
+	     item.geometry,
+	     tag_alternatives(
+                 ARRAY[jsonb_build_object('leisure', 'bathing_place'), jsonb_build_object('leisure', 'swimming_area')],
+                 jsonb_build_object(
+                         'name', TRIM(item.original_attributes->>'NAMN'),
+                         'website', TRIM(item.original_attributes->>'URL'),
+                         'description:sv', TRIM(REGEXP_REPLACE(item.original_attributes->>'BESKR_KORT', 'Välkommen [^!]+!', '')),
+                         'addr:street', TRIM(REGEXP_SUBSTR(item.original_attributes->>'GATUADRESS', '[^,0-9]+')),
+                         'addr:housenumber', TRIM(REGEXP_SUBSTR(item.original_attributes->>'GATUADRESS', '[0-9]+[^,]*')),
+                         'addr:city', TRIM((REGEXP_MATCH(item.original_attributes->>'GATUADRESS', ', (.*)'))[1])
+                 )) as tags
+	 FROM upstream.item
+	 WHERE item.dataset_id = 4
 	)
 	SELECT DISTINCT ON (ups_objs.id)
 		ups_objs.id AS upstream_item_ids, ups_objs.tags AS upstream_tags, ups_objs.geometry AS upstream_geom,
@@ -31,7 +33,8 @@ CREATE MATERIALIZED VIEW upstream.mv_match_badplatser_gavle AS SELECT * FROM ups
 ALTER TABLE upstream.mv_match_badplatser_gavle OWNER TO app;
 
 CREATE OR REPLACE VIEW upstream.v_deviation_badplatser_gavle AS
-	SELECT
+	SELECT *
+    FROM (SELECT DISTINCT ON (match_id)
 		4 AS dataset_id,
 		11 AS layer_id,
 		upstream_item_ids,
@@ -39,7 +42,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_badplatser_gavle AS
 			WHEN osm_element_id IS NULL THEN upstream_geom
 			ELSE NULL::geometry
 		END AS suggested_geom,
-		tag_diff(osm_tags, upstream_tags) AS suggested_tags,
+		tag_diff(osm_tags, ups_tags) AS suggested_tags,
 		osm_element_id,
 		osm_element_type,
 		CASE
@@ -51,8 +54,10 @@ CREATE OR REPLACE VIEW upstream.v_deviation_badplatser_gavle AS
 			ELSE 'Följande taggar, härledda ur från Gävle kommuns data, saknas på badplatsen här'::text
 		END AS description,
 		 '' AS note
-	FROM upstream.mv_match_badplatser_gavle
-	WHERE osm_tags IS NULL OR upstream_tags IS NULL OR tag_diff(osm_tags, upstream_tags) <> '{}'::jsonb;
+	FROM (SELECT ROW_NUMBER() OVER () AS match_id, * FROM upstream.mv_match_badplatser_gavle) sub
+	LEFT JOIN LATERAL jsonb_array_elements(upstream_tags) ups_tags ON true
+    ORDER BY match_id, count_jsonb_keys(tag_diff(osm_tags, ups_tags)) ASC) sub
+    WHERE osm_element_id IS NULL OR suggested_tags <> '{}'::jsonb;
 
 CREATE OR REPLACE FUNCTION api.tile_match_badplatser_gavle(z integer, x integer, y integer)
     RETURNS bytea

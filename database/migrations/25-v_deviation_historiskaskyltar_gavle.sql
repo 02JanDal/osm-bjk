@@ -7,10 +7,12 @@ CREATE OR REPLACE VIEW upstream.v_match_historiskaskyltar_gavle AS
 	), ups_objs AS (
 	 SELECT ARRAY[item.id] AS id,
 		item.geometry,
-		jsonb_build_object(
-			'information', 'sign',
-			'inscription', TRIM(item.original_attributes->>'NAMN')
-		) as tags
+		tag_alternatives(
+			ARRAY[jsonb_build_object('information', 'sign'), jsonb_build_object('information', 'board')],
+			jsonb_build_object(
+				'information', 'sign',
+				'inscription', TRIM(item.original_attributes->>'NAMN')
+			)) as tags
 	   FROM upstream.item
 	  WHERE item.dataset_id = 27
 	)
@@ -26,7 +28,8 @@ CREATE MATERIALIZED VIEW upstream.mv_match_historiskaskyltar_gavle AS SELECT * F
 ALTER TABLE upstream.mv_match_historiskaskyltar_gavle OWNER TO app;
 
 CREATE OR REPLACE VIEW upstream.v_deviation_historiskaskyltar_gavle AS
-	SELECT
+	SELECT *
+    FROM (SELECT DISTINCT ON (match_id)
 		27 AS dataset_id,
 		16 AS layer_id,
 		upstream_item_ids,
@@ -34,7 +37,7 @@ CREATE OR REPLACE VIEW upstream.v_deviation_historiskaskyltar_gavle AS
 			WHEN osm_element_id IS NULL THEN upstream_geom
 			ELSE NULL::geometry
 		END AS suggested_geom,
-		tag_diff(osm_tags, upstream_tags) AS suggested_tags,
+		tag_diff(osm_tags, ups_tags) AS suggested_tags,
 		osm_element_id,
 		osm_element_type,
 		CASE
@@ -46,8 +49,10 @@ CREATE OR REPLACE VIEW upstream.v_deviation_historiskaskyltar_gavle AS
 			ELSE 'Följande taggar, härledda ur från Gävle kommuns data, saknas på skylten här'::text
 		END AS description,
 		 '' AS note
-	FROM upstream.mv_match_historiskaskyltar_gavle
-	WHERE osm_tags IS NULL OR upstream_tags IS NULL OR tag_diff(osm_tags, upstream_tags) <> '{}'::jsonb;
+	FROM (SELECT ROW_NUMBER() OVER () AS match_id, * FROM upstream.mv_match_historiskaskyltar_gavle) sub
+	LEFT JOIN LATERAL jsonb_array_elements(upstream_tags) ups_tags ON true
+    ORDER BY match_id, count_jsonb_keys(tag_diff(osm_tags, ups_tags)) ASC) sub
+    WHERE osm_element_id IS NULL OR suggested_tags <> '{}'::jsonb;
 
 CREATE OR REPLACE FUNCTION api.tile_match_historiskaskyltar_gavle(z integer, x integer, y integer)
     RETURNS bytea

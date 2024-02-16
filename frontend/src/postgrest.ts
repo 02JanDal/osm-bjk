@@ -1,4 +1,5 @@
 import { PostgrestClient } from "@supabase/postgrest-js";
+import { APISERVER } from "./config.ts";
 
 export type MunicipalityRow = {
   code: string;
@@ -228,7 +229,7 @@ export interface Database {
   api: ApiSchema;
 }
 
-const postgrest = new PostgrestClient<Database>("https://osm.jandal.se/api", {
+const postgrest = new PostgrestClient<Database>(APISERVER, {
   schema: "api",
 });
 export default postgrest;

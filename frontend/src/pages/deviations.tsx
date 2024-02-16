@@ -16,6 +16,7 @@ import { useLocalStorage, useSessionStorage, useDisclosure } from "@mantine/hook
 import { Box } from "@mantine/core";
 import { Coordinate } from "ol/coordinate";
 import { MunicipalityVectorTiles } from "../components/map.tsx";
+import { TILESERVER } from "../config.ts";
 
 const geojson = new GeoJSON();
 
@@ -328,7 +329,7 @@ const Page: FC = () => {
               )}
             />
             <RLayerVectorTile
-              url={`https://osm.jandal.se/tiles/api.deviation/{z}/{x}/{y}.pbf?filter=${encodeURIComponent(cql)}`}
+              url={`${TILESERVER}/api.deviation/{z}/{x}/{y}.pbf?filter=${encodeURIComponent(cql)}`}
               format={new MVT()}
               zIndex={20}
               onClick={(evt) => {

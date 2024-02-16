@@ -10,16 +10,19 @@ RUN apt-get update \
 USER airflow
 
 RUN pip install --no-cache-dir \
-	"apache-airflow==${AIRFLOW_VERSION}" \
-	apache-airflow-providers-postgres \
-	apache-airflow-providers-discord \
-	apache-airflow-providers-ftp \
-	apache-airflow-providers-http \
-	apache-airflow-providers-sftp \
-  apache-airflow-providers-cncf-kubernetes \
-	airflow-code-editor black \
-	overpy osmapi osmium \
-	gtfs_kit \
-	pandas geopandas shapely fiona \
-  psycopg \
-	requests ujson
+    "apache-airflow==${AIRFLOW_VERSION}" \
+    apache-airflow-providers-celery \
+    apache-airflow-providers-postgres \
+    apache-airflow-providers-discord \
+    apache-airflow-providers-ftp \
+    apache-airflow-providers-http \
+    apache-airflow-providers-sftp \
+    apache-airflow-providers-cncf-kubernetes \
+    airflow-code-editor black \
+    overpy osmapi osmium \
+    gtfs_kit \
+    pandas geopandas shapely fiona \
+    psycopg \
+    redis \
+    requests ujson \
+    virtualenv

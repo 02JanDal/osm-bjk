@@ -35,8 +35,8 @@ ALTER TABLE upstream.mv_match_badplatser_gavle OWNER TO app;
 CREATE OR REPLACE VIEW upstream.v_deviation_badplatser_gavle AS
 	SELECT *
     FROM (SELECT DISTINCT ON (match_id)
-		4 AS dataset_id,
-		11 AS layer_id,
+		4::bigint AS dataset_id,
+		11::bigint AS layer_id,
 		upstream_item_ids,
 		CASE
 			WHEN osm_element_id IS NULL THEN upstream_geom

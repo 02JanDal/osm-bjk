@@ -57,8 +57,8 @@ ALTER TABLE upstream.mv_match_atervinning_gavle OWNER TO app;
 
 CREATE OR REPLACE VIEW upstream.v_deviation_atervinning_gavle AS
 	SELECT
-		17 AS dataset_id,
-		13 AS layer_id,
+		17::bigint AS dataset_id,
+		13::bigint AS layer_id,
 		upstream_item_ids,
 		CASE
 			WHEN osm_element_id IS NULL THEN upstream_geom

@@ -28,8 +28,8 @@ ALTER TABLE upstream.mv_match_parkmobler_gavle OWNER TO app;
 
 CREATE OR REPLACE VIEW upstream.v_deviation_parkmobler_gavle AS
 	SELECT
-		7 AS dataset_id,
-		16 AS layer_id,
+		7::bigint AS dataset_id,
+		16::bigint AS layer_id,
 		upstream_item_ids,
 		CASE
 			WHEN osm_element_id IS NULL THEN upstream_geom

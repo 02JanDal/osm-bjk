@@ -13,8 +13,8 @@ ALTER TABLE upstream.mv_match_transformatoromrade_topo50 OWNER TO app;
 DROP VIEW IF EXISTS upstream.v_deviation_transformatoromrade_topo50;
 CREATE OR REPLACE VIEW upstream.v_deviation_transformatoromrade_topo50 AS
 	SELECT
-		146 AS dataset_id,
-		20 AS layer_id,
+		146::bigint AS dataset_id,
+		20::bigint AS layer_id,
 		upstream_item_ids,
 		CASE
 			WHEN osm_element_id IS NULL THEN upstream_geom

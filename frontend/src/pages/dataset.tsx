@@ -11,6 +11,7 @@ import { fromLonLat } from "ol/proj";
 import { Circle, Fill, Icon, Stroke, Style } from "ol/style";
 import { FeatureLike } from "ol/Feature";
 import { Point } from "ol/geom";
+import { TILESERVER } from "../config.ts";
 
 import arrow from "../assets/arrow-33-xxl.png";
 
@@ -164,7 +165,7 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
             ) : null}
             {dataset.data?.view_name ? (
               <RLayerVectorTile
-                url={`https://osm.jandal.se/tiles/api.tile_match_${dataset.data.view_name}/{z}/{x}/{y}.pbf`}
+                url={`${TILESERVER}/api.tile_match_${dataset.data.view_name}/{z}/{x}/{y}.pbf`}
                 format={new MVT()}
                 zIndex={20}
                 minZoom={10}

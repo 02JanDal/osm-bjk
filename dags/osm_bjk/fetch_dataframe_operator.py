@@ -17,7 +17,11 @@ from osm_bjk.pg_cursor import pg_cursor
 
 def get_or_create_dataset(cur: Cursor, provider: str, dataset: str, dataset_url: str, license: str) -> int:
     cur.execute("SELECT id FROM upstream.provider WHERE name = %s", (provider,))
-    provider_id = cur.fetchone()[0]
+    if row := cur.fetchone():
+        provider_id = row[0]
+    else:
+        cur.execute("INSERT INTO upstream.provider (name, url) VALUES (%s, %s) RETURNING id", (provider, ""))
+        provider_id = cur.fetchone()[0]
     cur.execute(
         "INSERT INTO upstream.dataset (name, provider_id, url, license) VALUES (%s, %s, %s, %s) ON CONFLICT (provider_id, name) DO UPDATE SET url = EXCLUDED.url, license = EXCLUDED.license RETURNING id",
         (dataset, provider_id, dataset_url, license),

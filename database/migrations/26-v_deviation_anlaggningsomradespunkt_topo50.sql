@@ -128,11 +128,11 @@ DROP VIEW IF EXISTS upstream.v_deviation_anlaggningsomradespunkt_topo50;
 CREATE OR REPLACE VIEW upstream.v_deviation_anlaggningsomradespunkt_topo50 AS
 	SELECT *
     FROM (SELECT DISTINCT ON (match_id)
-		139 AS dataset_id,
+		139::bigint AS dataset_id,
 		CASE WHEN andamal IN ('Campingplats', 'Gästhamn', 'Småbåtshamn', 'Sjöräddningsstation') THEN 18
-			 WHEN andamal IN ('Hamn') THEN 19
-			 WHEN andamal IN ('Fotbollsplan', 'Bollplan', 'Travbana', 'Galoppbana', 'Skjutbana, mindre', 'Skjutbana', 'Idrottsanläggning') THEN 9
-			 WHEN andamal IN ('Badplats') THEN 11
+			 WHEN andamal IN ('Hamn') THEN 19::bigint
+			 WHEN andamal IN ('Fotbollsplan', 'Bollplan', 'Travbana', 'Galoppbana', 'Skjutbana, mindre', 'Skjutbana', 'Idrottsanläggning') THEN 9::bigint
+			 WHEN andamal IN ('Badplats') THEN 11::bigint
 		END AS layer_id,
 		upstream_item_ids,
 		CASE

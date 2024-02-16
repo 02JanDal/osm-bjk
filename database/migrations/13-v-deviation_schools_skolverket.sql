@@ -61,8 +61,8 @@ ALTER TABLE upstream.mv_match_schools_skolverket OWNER TO app;
 
 CREATE OR REPLACE VIEW upstream.v_deviation_schools_skolverket AS
 	SELECT
-		109 AS dataset_id,
-		5 AS layer_id,
+		109::bigint AS dataset_id,
+		5::bigint AS layer_id,
 		upstream_item_ids,
 		CASE
 			WHEN osm_element_id IS NULL THEN upstream_geom

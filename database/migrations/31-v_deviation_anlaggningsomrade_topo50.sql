@@ -223,12 +223,12 @@ DROP VIEW IF EXISTS upstream.v_deviation_anlaggningsomrade_topo50;
 CREATE OR REPLACE VIEW upstream.v_deviation_anlaggningsomrade_topo50 AS
 	SELECT *
     FROM (SELECT DISTINCT ON (match_id)
-		140 AS dataset_id,
-		CASE WHEN andamal IN ('Vintersportanläggning', 'Civilt övningsfält', 'Motorsportanläggning', 'Besökspark', 'Golfbana', 'Kulturanläggning', 'Aktivitetspark') THEN 18 -- Fritid
-			 WHEN andamal IN ('Civilt skjutfält', 'Samhällsfunktion', 'Industriområde') THEN 7 -- Mark
-			 WHEN andamal IN ('Skolområde', 'Koloniområde', 'Sjukhusområde', 'Rengärde', 'Begravningsplats') THEN 7 -- Mark
-			 WHEN andamal IN ('Kriminalvårdsanstalt', 'Testbana', 'Trafikövningsplats') THEN 21 -- Butiker och tjänster
-			 WHEN andamal IN ('Avfallsanläggning', 'Energiproduktion', 'Täkt', 'Gruvområde') THEN 19 -- Industri
+		140::bigint AS dataset_id,
+		CASE WHEN andamal IN ('Vintersportanläggning', 'Civilt övningsfält', 'Motorsportanläggning', 'Besökspark', 'Golfbana', 'Kulturanläggning', 'Aktivitetspark') THEN 18::bigint -- Fritid
+			 WHEN andamal IN ('Civilt skjutfält', 'Samhällsfunktion', 'Industriområde') THEN 7::bigint -- Mark
+			 WHEN andamal IN ('Skolområde', 'Koloniområde', 'Sjukhusområde', 'Rengärde', 'Begravningsplats') THEN 7::bigint -- Mark
+			 WHEN andamal IN ('Kriminalvårdsanstalt', 'Testbana', 'Trafikövningsplats') THEN 21::bigint -- Butiker och tjänster
+			 WHEN andamal IN ('Avfallsanläggning', 'Energiproduktion', 'Täkt', 'Gruvområde') THEN 19::bigint -- Industri
 		END AS layer_id,
 		upstream_item_ids,
 		CASE

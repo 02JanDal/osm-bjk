@@ -43,8 +43,8 @@ ALTER TABLE upstream.mv_match_preschools_scb OWNER TO app;
 CREATE OR REPLACE VIEW upstream.v_deviation_preschools_scb AS
 	SELECT *
     FROM (SELECT DISTINCT ON (match_id)
-		110 AS dataset_id,
-		15 AS layer_id,
+		110::bigint AS dataset_id,
+		15::bigint AS layer_id,
 		upstream_item_ids,
 		CASE
 			WHEN osm_element_id IS NULL THEN upstream_geom

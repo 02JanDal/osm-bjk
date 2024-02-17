@@ -9,7 +9,6 @@ import pandas as pd
 
 from airflow import DAG, Dataset
 from osm_bjk.fetch_dataframe_operator import FetchDataframeOperator
-from osm_bjk.licenses import CC0_1_0
 
 
 class DAGArgs(TypedDict):
@@ -82,8 +81,6 @@ for name, identifier, resource, entry in datasets:
             fetch=f"https://catalog.gavle.se/store/1/resource/{resource}",
             provider="Gävle kommun",
             dataset=name,
-            dataset_url=f"https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry={entry}&esc_context=1",
-            license=CC0_1_0,
             outlets=[Dataset(f"psql://upstream/gavlekommun/{identifier}")],
         )
 
@@ -104,8 +101,6 @@ with DAG(
         fetch=fetch_skolor,
         provider="Gävle kommun",
         dataset="Kommunala och privata skolor",
-        dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=6&esc_context=1",
-        license=CC0_1_0,
         outlets=[Dataset("psql://upstream/gavlekommun/skolor")],
     )
 
@@ -142,8 +137,6 @@ with DAG(
             fetch=FetchExtract("76", file),
             provider="Gävle kommun",
             dataset=f"Baskarta Byggnader ({identifier})",
-            dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=20&esc_context=1",
-            license=CC0_1_0,
             outlets=[Dataset(f"psql://upstream/gavlekommun/byggnader-{identifier}")],
         )
 
@@ -161,8 +154,6 @@ with DAG(
             fetch=FetchExtract("115", file),
             provider="Gävle kommun",
             dataset=f"Parkeringar ({identifier})",
-            dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=112&esc_context=1",
-            license=CC0_1_0,
             outlets=[Dataset(f"psql://upstream/gavlekommun/parkeringar-{identifier}")],
         )
 
@@ -185,8 +176,6 @@ with DAG(
             fetch=FetchExtract("337", f"tillganglighet_{file}.json"),
             provider="Gävle kommun",
             dataset=f"Tillgänglighet ({name})",
-            dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=327&esc_context=1",
-            license=CC0_1_0,
             outlets=[Dataset(f"psql://upstream/gavlekommun/tillganglighet-{file}")],
         )
 
@@ -203,8 +192,6 @@ with DAG(f"gavlekommun-cykelplan", description=f"Hämtar Cykelplan från Gävle 
             fetch=FetchExtract("443", f"Cykelplan_{file}.json"),
             provider="Gävle kommun",
             dataset=f"Cykelplan ({name})",
-            dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=438&esc_context=1",
-            license=CC0_1_0,
             outlets=[Dataset(f"psql://upstream/gavlekommun/cykelplan-{file.lower()}")],
         )
 
@@ -233,8 +220,6 @@ with DAG(
         fetch=fetch_detaljer,
         provider="Gävle kommun",
         dataset=f"Baskarta Detaljer",
-        dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=63&esc_context=1",
-        license=CC0_1_0,
         outlets=[Dataset(f"psql://upstream/gavlekommun/detaljer")],
     )
 
@@ -252,8 +237,6 @@ with DAG(
             fetch=FetchExtract("78", f"{file}.json"),
             provider="Gävle kommun",
             dataset=f"Motionsspår ({name})",
-            dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=8&esc_context=1",
-            license=CC0_1_0,
             outlets=[Dataset(f"psql://upstream/gavlekommun/motionsspar-{file.lower()}")],
         )
 
@@ -271,8 +254,6 @@ with DAG(
             fetch=FetchExtract("92", f"baskarta_{file}.json"),
             provider="Gävle kommun",
             dataset=f"Baskarta Vatten ({name})",
-            dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=62&esc_context=1",
-            license=CC0_1_0,
             outlets=[Dataset(f"psql://upstream/gavlekommun/vatten-{file.lower()}")],
         )
 
@@ -300,8 +281,6 @@ with DAG(
         fetch=fetch_vattenobjekt,
         provider="Gävle kommun",
         dataset=f"Baskarta Vatten",
-        dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=62&esc_context=1",
-        license=CC0_1_0,
         outlets=[Dataset(f"psql://upstream/gavlekommun/vatten-vattenobjekt")],
     )
 
@@ -315,7 +294,5 @@ with DAG(f"gavlekommun-vagar", description=f"Hämtar Baskarta Vägar från Gävl
             fetch=FetchExtract("94", f"baskarta_{file}.json"),
             provider="Gävle kommun",
             dataset=f"Baskarta Vägar ({name})",
-            dataset_url="https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=56&esc_context=1",
-            license=CC0_1_0,
             outlets=[Dataset(f"psql://upstream/gavlekommun/vagar-{file.lower()}")],
         )

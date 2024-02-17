@@ -7,7 +7,6 @@ from airflow import DAG, Dataset
 import geopandas as gpd
 
 from osm_bjk.fetch_dataframe_operator import FetchDataframeOperator
-from osm_bjk.licenses import CC0_1_0
 
 with DAG(
     "scb-forskolor",
@@ -43,8 +42,6 @@ with DAG(
         fetch=fetch_forskolor,
         provider="SCB",
         dataset=f"Förskolor",
-        dataset_url="https://www.scb.se/vara-tjanster/oppna-data/oppna-geodata/forskolor/",
-        license=CC0_1_0,
         outlets=[Dataset(f"psql://upstream/scb/forskolor")],
     )
 
@@ -81,7 +78,5 @@ with DAG(
         fetch=fetch_kontor,
         provider="SCB",
         dataset=f"Myndighets- och kommunkontor",
-        dataset_url="https://www.scb.se/vara-tjanster/oppna-data/oppna-geodata/myndighets--och-kommunkontor/",
-        license=CC0_1_0,
         outlets=[Dataset(f"psql://upstream/scb/myndighetskontor")],
     )

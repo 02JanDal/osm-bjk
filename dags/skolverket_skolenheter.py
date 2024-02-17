@@ -8,8 +8,7 @@ from airflow.decorators import task
 from requests import Session, Response
 
 from osm_bjk import make_prefix
-from osm_bjk.fetch_dataframe_operator import get_or_create_dataset, upsert
-from osm_bjk.licenses import CC0_1_0
+from osm_bjk.fetch_dataframe_operator import get_dataset, upsert
 from osm_bjk.pg_cursor import pg_cursor
 
 
@@ -47,12 +46,10 @@ with DAG(
             with Session() as http:
                 fetched_at = datetime.utcnow()
 
-                dataset_id = get_or_create_dataset(
+                dataset_id = get_dataset(
                     cur,
                     "Skolverket",
                     "Skolenhetsregistret",
-                    "https://www.skolverket.se/skolutveckling/skolenhetsregistret",
-                    CC0_1_0,
                 )
 
                 cur.execute(

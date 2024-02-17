@@ -17,7 +17,6 @@ from osm_bjk.lantmateriet import (
     lm_order_get_files,
     FileData,
 )
-from osm_bjk.licenses import CC0_1_0
 
 
 from typing import TYPE_CHECKING, TypedDict, Literal
@@ -183,8 +182,6 @@ with DAG(
                 fetch=FetchBase(layer_slug, sublayer_slug),
                 provider="Lantmäteriet",
                 dataset=f"Topografi 50 ({layer['name']} - {sublayer['name']})",
-                dataset_url="https://www.lantmateriet.se/sv/geodata/vara-produkter/produktlista/topografi-50-nedladdning-vektor/",
-                license=CC0_1_0,
                 outlets=[Dataset(f"psql://upstream/lm/topo50/{layer_slug}/{sublayer_slug}")],
             )
             check_ready_t >> op

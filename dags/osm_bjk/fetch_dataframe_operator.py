@@ -15,18 +15,18 @@ from osm_bjk import make_prefix
 from osm_bjk.pg_cursor import pg_cursor
 
 
-def get_or_create_dataset(cur: Cursor, provider: str, dataset: str, dataset_url: str, license: str) -> int:
+def get_dataset(cur: Cursor, provider: str, dataset: str) -> int:
     cur.execute("SELECT id FROM upstream.provider WHERE name = %s", (provider,))
     if row := cur.fetchone():
         provider_id = row[0]
     else:
-        cur.execute("INSERT INTO upstream.provider (name, url) VALUES (%s, %s) RETURNING id", (provider, ""))
-        provider_id = cur.fetchone()[0]
-    cur.execute(
-        "INSERT INTO upstream.dataset (name, provider_id, url, license) VALUES (%s, %s, %s, %s) ON CONFLICT (provider_id, name) DO UPDATE SET url = EXCLUDED.url, license = EXCLUDED.license RETURNING id",
-        (dataset, provider_id, dataset_url, license),
-    )
-    return cur.fetchone()[0]
+        raise KeyError("No such provider")
+    cur.execute("SELECT id FROM upstream.dataset WHERE provider_id = %s AND name = %s", (provider_id, dataset))
+    if row := cur.fetchone():
+        dataset_id = row[0]
+    else:
+        raise KeyError("No such dataset")
+    return dataset_id
 
 
 def upsert(
@@ -89,16 +89,12 @@ class FetchDataframeOperator(BaseOperator):
         fetch: Callable[[TaskInstance], GeoDataFrame] | str,
         provider: str,
         dataset: str,
-        dataset_url: str,
-        license: str,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.fetch = fetch
         self.provider = provider
         self.dataset = dataset
-        self.dataset_url = dataset_url
-        self.license = license
 
     def execute(self, context: Context):
         print("Fetching...")
@@ -112,7 +108,7 @@ class FetchDataframeOperator(BaseOperator):
         df = df.replace(np.nan, None)
         print("Preparing database...")
         with pg_cursor(cast(TaskInstance, context["ti"])) as cur:
-            dataset_id = get_or_create_dataset(cur, self.provider, self.dataset, self.dataset_url, self.license)
+            dataset_id = get_dataset(cur, self.provider, self.dataset)
             print("Using dataset:", dataset_id)
 
             if isinstance(df.index, RangeIndex):

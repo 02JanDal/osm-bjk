@@ -45,7 +45,7 @@ CREATE OR REPLACE VIEW upstream.v_match_schools_skolverket AS
                                        'addr:postcode', TRIM(item.original_attributes->'Besoksadress'->>'Postnr'),
                                        'contact:website', TRIM(item.original_attributes->>'Webbadress'),
                                        'contact:phone', fix_phone(item.original_attributes->>'Telefon'),
-                                       'contact:email', TRIM(item.original_attributes->>'Epost')
+                                       'contact:email', CASE WHEN TRIM(item.original_attributes->>'Epost') LIKE '%.%@%' THEN NULL ELSE TRIM(item.original_attributes->>'Epost') END
                                ) || CASE
                                    WHEN item.original_attributes->>'Inriktningstyp' = 'Waldorf' THEN jsonb_build_object('pedagogy', 'waldorf')
                                    ELSE '{}'::jsonb

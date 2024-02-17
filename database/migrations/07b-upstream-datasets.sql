@@ -87,5 +87,6 @@ INSERT INTO upstream.dataset OVERRIDING SYSTEM VALUE VALUES (169, 'Topografi 50 
 INSERT INTO upstream.dataset OVERRIDING SYSTEM VALUE VALUES (170, 'Topografi 50 (Mark - Mark)', 4, 'https://www.lantmateriet.se/sv/geodata/vara-produkter/produktlista/topografi-50-nedladdning-vektor/', 'https://creativecommons.org/publicdomain/zero/1.0/', '2023-10-07 00:28:46+00', 'Topografi 50', NULL) ON CONFLICT DO NOTHING;
 INSERT INTO upstream.dataset OVERRIDING SYSTEM VALUE VALUES (199, 'Baskarta Vatten', 1, 'https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=62&esc_context=1', 'https://creativecommons.org/publicdomain/zero/1.0/', '2024-02-01 15:52:28.389078+00', 'Baskarta Vatten', NULL) ON CONFLICT DO NOTHING;
 INSERT INTO upstream.dataset OVERRIDING SYSTEM VALUE VALUES (340, 'NVDB', 5, 'https://www.nvdb.se/', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'NVDB', NULL) ON CONFLICT DO NOTHING;
+INSERT INTO upstream.dataset OVERRIDING SYSTEM VALUE VALUES (462, 'Vindbrukskollen', 6, 'https://ext-geodatakatalog.lansstyrelsen.se/GeodataKatalogen/srv/api/records/GetMetaDataById?id=ed5814b2-08bf-493a-a164-7819e1b590d6', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Vindbrukskollen', NULL);
 
-SELECT pg_catalog.setval('upstream.dataset_id_seq', 461, true);
+SELECT pg_catalog.setval('upstream.dataset_id_seq', 462, true);

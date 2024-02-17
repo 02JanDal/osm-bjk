@@ -4,6 +4,7 @@ from typing import cast, NamedTuple
 
 import geopandas
 import numpy as np
+import pandas as pd
 import ujson
 from airflow.models import BaseOperator, TaskInstance
 from airflow.utils.context import Context
@@ -120,7 +121,7 @@ class FetchDataframeOperator(BaseOperator):
                         row.geometry.wkb,
                         df.crs.to_epsg(),
                         ujson.dumps(process_row(row)),
-                        row.bjk__updatedAt if "bjk_updatedAt" in row else None,
+                        row.bjk__updatedAt if row.bjk__updatedAt is pd.NaT else None,
                     )
                     for row in df.itertuples(index=False)
                     if row.geometry is not None
@@ -148,7 +149,7 @@ class FetchDataframeOperator(BaseOperator):
                             cast(bytes, row.geometry.wkb),
                             cast(int, df.crs.to_epsg()),
                             process_row(row),
-                            row.bjk__updatedAt if "bjk_updatedAt" in row else None,
+                            row.bjk__updatedAt if row.bjk__updatedAt is pd.NaT else None,
                         )
                         for row in df.itertuples()
                     ],

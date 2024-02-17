@@ -19,5 +19,6 @@ INSERT INTO api.layer OVERRIDING SYSTEM VALUE VALUES (19, 'Industri', false, 'In
 INSERT INTO api.layer OVERRIDING SYSTEM VALUE VALUES (20, 'Ledningar', false, 'Alla större kraftledningar, transformatorområden, m.m. finns') ON CONFLICT DO NOTHING;
 INSERT INTO api.layer OVERRIDING SYSTEM VALUE VALUES (18, 'Fritid', false, 'Saker som rör fritid, som småbåtshamnar, campingplatser, besöksparker, m.m. (dock ej sport och leder)') ON CONFLICT DO NOTHING;
 INSERT INTO api.layer OVERRIDING SYSTEM VALUE VALUES (21, 'Butiker & tjänster', false, 'Alla butiker och tjänster (inkl. offentliga) finns') ON CONFLICT DO NOTHING;
+INSERT INTO api.layer OVERRIDING SYSTEM VALUE VALUES (22, 'Vindkraftverk', false, 'Alla vindkraftverk finns') ON CONFLICT DO NOTHING;
 
 SELECT pg_catalog.setval('api.layer_id_seq', 21, true);

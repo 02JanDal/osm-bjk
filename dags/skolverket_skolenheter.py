@@ -93,6 +93,8 @@ with DAG(
                         if unit.status_code == 410:
                             deleted.append(code)
                             return None
+                        elif unit.status_code == 404:
+                            return None
                         unit.raise_for_status()
                         return unit.json()["SkolenhetInfo"]
 

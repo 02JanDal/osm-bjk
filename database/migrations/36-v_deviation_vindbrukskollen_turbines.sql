@@ -14,12 +14,12 @@ CREATE OR REPLACE VIEW upstream.v_match_vindbrukskollen_turbines AS
 				'generator:type', 'horizontal_axis',
 				'manufacturer', TRIM(item.original_attributes->>'FABRIKAT'),
 				'generator:output:electricity', REPLACE(item.original_attributes->>'MAXEFFEKT', ',', '.') || ' MW',
-				'model', REPLACE(TRIM(item.original_attributes->>'MODELL'), ',', '.'),
+				'model', CASE WHEN TRIM(item.original_attributes->>'MODELL') = '' THEN NULL ELSE REPLACE(TRIM(item.original_attributes->>'MODELL'), ',', '.') END,
 				'height:hub', item.original_attributes->>'NAVHOJD',
-				'operator', TRIM(item.original_attributes->>'ORGNAMN'),
+				'operator', CASE WHEN TRIM(item.original_attributes->>'ORGNAMN') ILIKE 'Projektör ej registrerad%' THEN NULL ELSE TRIM(item.original_attributes->>'ORGNAMN') END,
 				'rotor:diameter', item.original_attributes->>'ROTDIAMETE',
 				'height', item.original_attributes->>'TOTALHOJD',
-				'start_date', CASE WHEN item.original_attributes->>'UPPFORT' IS NOT NULL THEN TO_CHAR(TO_DATE(item.original_attributes->>'UPPFORT', 'YYYYMMDD'), 'YYYY-MM-DD') ELSE NULL END,
+				'start_date', CASE WHEN item.original_attributes->>'UPPFORT' IS NOT NULL AND item.original_attributes->>'UPPFORT' <> '19000101' THEN TO_CHAR(TO_DATE(item.original_attributes->>'UPPFORT', 'YYYYMMDD'), 'YYYY-MM-DD') ELSE NULL END,
 				'ref', item.original_attributes->>'VERKID'
 			)) as tags,
 			municipality.code

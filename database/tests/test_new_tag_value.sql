@@ -102,3 +102,58 @@ SELECT test(
         'http://example.com'
     )
 );
+
+SELECT test(
+    'completely different operator',
+    (true, 'Hagfors kommun')::new_tag_value_type,
+    new_tag_value(
+        'operator',
+        'Hagfors kommun',
+        'Karlskoga kommun'
+    )
+);
+SELECT test(
+    'operator only changes case',
+    (false, null)::new_tag_value_type,
+    new_tag_value(
+        'operator',
+        'Hagfors kommun',
+        'Hagfors Kommun'
+    )
+);
+SELECT test(
+    'operator same when translated',
+    (false, null)::new_tag_value_type,
+    new_tag_value(
+        'operator',
+        'Göteborg kommun',
+        'Göteborgs kommun'
+    )
+);
+SELECT test(
+    'operator same when translated, currently using translated',
+    (false, null)::new_tag_value_type,
+    new_tag_value(
+        'operator',
+        'Göteborg kommun',
+        'Göteborgs Stad'
+    )
+);
+SELECT test(
+    'operator same as translated',
+    (false, null)::new_tag_value_type,
+    new_tag_value(
+        'operator',
+        'Göteborgs Stad',
+        'Göteborg kommun'
+    )
+);
+SELECT test(
+    'suggests translated operator',
+    (true, 'Göteborgs Stad')::new_tag_value_type,
+    new_tag_value(
+        'operator',
+        'Göteborg kommun',
+        'Privata Skolan AB'
+    )
+);

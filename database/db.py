@@ -30,7 +30,7 @@ directory_tests = directory / "tests"
 
 def migrations():
     return sorted(
-        (e for e in directory_migrations.iterdir() if e.is_file() and e.name.split("-")[0].isdigit()),
+        (e for e in directory_migrations.iterdir() if e.is_file() and e.name.split("-")[0][0].isdigit()),
         key=lambda item: item.name,
     )
 

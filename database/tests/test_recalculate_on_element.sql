@@ -87,7 +87,7 @@ BEGIN
     CREATE OR REPLACE VIEW upstream.v_deviations AS SELECT * FROM upstream.v_deviation_test_dataset;
 
     ASSERT 6 = (SELECT COUNT(*) FROM upstream.v_deviation_test_dataset);
-    PERFORM upstream.sync_deviations('test_dataset'::text);
+    SELECT upstream.sync_deviations('test_dataset'::text);
     ASSERT 6 = (SELECT COUNT(*) FROM api.deviation);
 
     DELETE FROM osm.node WHERE id = 45;

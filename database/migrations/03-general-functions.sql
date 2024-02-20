@@ -91,6 +91,16 @@ SELECT
   fix_phone(new_value) IS DISTINCT FROM fix_phone(old_value)
 $$;
 
+CREATE OR REPLACE FUNCTION public.normalize_float(value text) RETURNS text
+    LANGUAGE plpgsql IMMUTABLE LEAKPROOF PARALLEL SAFE
+    AS $$
+BEGIN
+    RETURN $1::float::text;
+EXCEPTION WHEN others THEN
+    RETURN $1;
+END;
+    $$;
+
 CREATE OR REPLACE FUNCTION public.new_tag_value(key text, new_value text, old_value text) RETURNS public.new_tag_value_type
     LANGUAGE sql IMMUTABLE LEAKPROOF PARALLEL SAFE
     AS $$
@@ -104,7 +114,11 @@ SELECT
               ELSE (false, null)::public.new_tag_value_type
          END
        WHEN key = 'operator' THEN
-         CASE WHEN LOWER(public.translate_operator(new_value)) <> LOWER(public.translate_operator(old_value)) THEN (true, public.translate_operator(new_value))::public.new_tag_value_type
+         CASE WHEN LOWER(public.translate_operator(new_value)) IS DISTINCT FROM LOWER(public.translate_operator(old_value)) THEN (true, public.translate_operator(new_value))::public.new_tag_value_type
+              ELSE (false, null)::public.new_tag_value_type
+         END
+       WHEN key = 'generator:output:electricity' THEN
+         CASE WHEN normalize_float((STRING_TO_ARRAY(new_value, ' '))[1]) IS DISTINCT FROM normalize_float((STRING_TO_ARRAY(old_value, ' '))[1]) THEN (true, new_value)::public.new_tag_value_type
               ELSE (false, null)::public.new_tag_value_type
          END
        -- Fallback, do a normal comparison.

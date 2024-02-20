@@ -157,3 +157,59 @@ SELECT test(
         'Privata Skolan AB'
     )
 );
+
+
+SELECT test(
+    'suggests non-float value',
+    (true, 'yes')::new_tag_value_type,
+    new_tag_value(
+        'generator:output:electricity',
+        'yes',
+        null
+    )
+);
+SELECT test(
+    'suggests changed non-float value',
+    (true, 'yes')::new_tag_value_type,
+    new_tag_value(
+        'generator:output:electricity',
+        'yes',
+        '2.0 MW'
+    )
+);
+SELECT test(
+    'suggests float value',
+    (true, '2.0 MW')::new_tag_value_type,
+    new_tag_value(
+        'generator:output:electricity',
+        '2.0 MW',
+        null
+    )
+);
+SELECT test(
+    'suggests changed float value',
+    (true, '2.5 MW')::new_tag_value_type,
+    new_tag_value(
+        'generator:output:electricity',
+        '2.5 MW',
+        '2.0 MW'
+    )
+);
+SELECT test(
+    'does not suggests equivalent float value',
+    (false, NULL)::new_tag_value_type,
+    new_tag_value(
+        'generator:output:electricity',
+        '2.0 MW',
+        '2 MW'
+    )
+);
+SELECT test(
+    'does not suggests equivalent float value, reversed',
+    (false, NULL)::new_tag_value_type,
+    new_tag_value(
+        'generator:output:electricity',
+        '2 MW',
+        '2.0 MW'
+    )
+);

@@ -121,7 +121,7 @@ class FetchDataframeOperator(BaseOperator):
                         row.geometry.wkb,
                         df.crs.to_epsg(),
                         ujson.dumps(process_row(row)),
-                        row.bjk__updatedAt if row.bjk__updatedAt is not pd.NaT else None,
+                        val if (val := getattr(row, "bjk__updatedAt", pd.NaT)) is not pd.NaT else None,
                     )
                     for row in df.itertuples(index=False)
                     if row.geometry is not None
@@ -149,7 +149,7 @@ class FetchDataframeOperator(BaseOperator):
                             cast(bytes, row.geometry.wkb),
                             cast(int, df.crs.to_epsg()),
                             process_row(row),
-                            row.bjk__updatedAt if row.bjk__updatedAt is not pd.NaT else None,
+                            val if (val := getattr(row, "bjk__updatedAt", pd.NaT)) is not pd.NaT else None,
                         )
                         for row in df.itertuples()
                     ],

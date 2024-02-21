@@ -88,7 +88,26 @@ VALUES (4, 'Badplatser och badanläggningar', 1, 'https://www.gavle.se/kommunens
        (170, 'Topografi 50 (Mark - Mark)', 4, 'https://www.lantmateriet.se/sv/geodata/vara-produkter/produktlista/topografi-50-nedladdning-vektor/', 'https://creativecommons.org/publicdomain/zero/1.0/', '2023-10-07 00:28:46+00', 'Topografi 50', NULL),
        (199, 'Baskarta Vatten', 1, 'https://www.gavle.se/kommunens-service/kommun-och-politik/statistik-fakta-och-oppna-data/oppna-data/datakatalog/data/#esc_entry=62&esc_context=1', 'https://creativecommons.org/publicdomain/zero/1.0/', '2024-02-01 15:52:28.389078+00', 'Baskarta Vatten', NULL),
        (340, 'NVDB', 5, 'https://www.nvdb.se/', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'NVDB', NULL),
-       (462, 'Vindbrukskollen', 6, 'https://ext-geodatakatalog.lansstyrelsen.se/GeodataKatalogen/srv/api/records/GetMetaDataById?id=ed5814b2-08bf-493a-a164-7819e1b590d6', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Vindbrukskollen', 'vindbrukskollen_turbines')
+       (462, 'Vindbrukskollen', 6, 'https://ext-geodatakatalog.lansstyrelsen.se/GeodataKatalogen/srv/api/records/GetMetaDataById?id=ed5814b2-08bf-493a-a164-7819e1b590d6', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Vindbrukskollen', 'vindbrukskollen_turbines'),
+
+       -- Uppsala kommun
+       (463, 'Badplatser', 7, 'https://opendata.uppsala.se/datasets/aadc5420e8884d32b2efe0d10fbfdfe5_70/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Badplatser', NULL),
+       (464, 'Friluftsområden och naturreservat', 7, 'https://opendata.uppsala.se/datasets/7f4010a678244813829db66246dfadbe_55/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Friluftsområden och naturreservat', NULL),
+       (465, 'Fågeltorn och utkiksplatser', 7, 'https://opendata.uppsala.se/datasets/8df41ee8e7b9438ebe47d7ca34148463_69/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Fågeltorn och utkiksplatser', NULL),
+       (466, 'Grillplatser', 7, 'https://opendata.uppsala.se/datasets/635e669c84724263b090259ab6ad0572_68/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Grillplatser', NULL),
+       (467, 'Lekplatser', 7, 'https://opendata.uppsala.se/datasets/67c02b41524b45ad9d70c86fdd12131f_66/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Lekplatser', NULL),
+       (468, 'Linnéstigar', 7, 'https://opendata.uppsala.se/datasets/67535a1e0dbe441ba251114e1b013779_65/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Linnéstigar', NULL),
+       (469, 'Motionsspår', 7, 'https://opendata.uppsala.se/datasets/e037a040c42a403c9eb7b56ad881660c_86/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Motionsspår', NULL),
+       (470, 'Mountainbikeleder', 7, 'https://opendata.uppsala.se/datasets/99fc3cc729b04b50b7146ecbf5aac7e9_64/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Mountainbikeleder', NULL),
+       (471, 'Områdesleder', 7, 'https://opendata.uppsala.se/datasets/4b4ec89b57ae43508412e8bdc455d5af_63/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Områdesleder', NULL),
+       (472, 'Raststugor', 7, 'https://opendata.uppsala.se/datasets/ef99e21553114edeb02e3c06bc499213_62/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Raststugor', NULL),
+       (473, 'Ridstigar', 7, 'https://opendata.uppsala.se/datasets/b819f0609959415daa0a1b96958fd8b9_61/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Ridstigar', NULL),
+       (474, 'Skidspår', 7, 'https://opendata.uppsala.se/datasets/70d68ebd26d2431ba4f85a032fa6062a_60/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Skidspår', NULL),
+       (475, 'Skridskoleder', 7, 'https://opendata.uppsala.se/datasets/619bf85e3b5c4826aa4bdd2b585e50d5_59/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Skridskoleder', NULL),
+       (476, 'Utegym', 7, 'https://opendata.uppsala.se/datasets/e1e907d3f9c1430e8c7c23d5a94680a9_82/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Utegym', NULL),
+       (477, 'Vandringsleder', 7, 'https://opendata.uppsala.se/datasets/0d73213bf4c54c0e899a3c11eefdf860_80/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Vandringsleder', NULL),
+       (478, 'Vindskydd', 7, 'https://opendata.uppsala.se/datasets/d6c0b05b7ad54e5596d54f3d83da2cc7_56/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Vindskydd', NULL),
+       (479, 'Återvinningscentraler', 7, 'https://opendata.uppsala.se/datasets/e892a61c3e144d8ab4857395b141766d_19/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Återvinningscentraler', NULL)
 ON CONFLICT DO NOTHING;
 
-SELECT pg_catalog.setval('upstream.dataset_id_seq', 462, true);
+SELECT pg_catalog.setval('upstream.dataset_id_seq', 479, true);

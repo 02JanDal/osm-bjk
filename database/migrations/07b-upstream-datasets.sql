@@ -94,7 +94,7 @@ VALUES (4, 'Badplatser och badanläggningar', 1, 'https://www.gavle.se/kommunens
        (463, 'Badplatser', 7, 'https://opendata.uppsala.se/datasets/aadc5420e8884d32b2efe0d10fbfdfe5_70/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Badplatser', NULL),
        (464, 'Friluftsområden och naturreservat', 7, 'https://opendata.uppsala.se/datasets/7f4010a678244813829db66246dfadbe_55/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Friluftsområden och naturreservat', NULL),
        (465, 'Fågeltorn och utkiksplatser', 7, 'https://opendata.uppsala.se/datasets/8df41ee8e7b9438ebe47d7ca34148463_69/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Fågeltorn och utkiksplatser', NULL),
-       (466, 'Grillplatser', 7, 'https://opendata.uppsala.se/datasets/635e669c84724263b090259ab6ad0572_68/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Grillplatser', NULL),
+       (466, 'Grillplatser', 7, 'https://opendata.uppsala.se/datasets/635e669c84724263b090259ab6ad0572_68/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Grillplatser', 'grillplatser_uppsala'),
        (467, 'Lekplatser', 7, 'https://opendata.uppsala.se/datasets/67c02b41524b45ad9d70c86fdd12131f_66/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Lekplatser', NULL),
        (468, 'Linnéstigar', 7, 'https://opendata.uppsala.se/datasets/67535a1e0dbe441ba251114e1b013779_65/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Linnéstigar', NULL),
        (469, 'Motionsspår', 7, 'https://opendata.uppsala.se/datasets/e037a040c42a403c9eb7b56ad881660c_86/about', 'https://creativecommons.org/publicdomain/zero/1.0/', NULL, 'Motionsspår', NULL),

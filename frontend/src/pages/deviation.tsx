@@ -40,6 +40,7 @@ import { useDAGStatus, useTriggerDAG } from "../hooks/dags.tsx";
 import { TagKeyLink } from "../components/TagKeyLink.tsx";
 import { TagValueLink } from "../components/TagValueLink.tsx";
 import _ from "lodash";
+import { ControlOpenInOSM } from "../components/ControlOpenInOSM.tsx";
 
 const geojson = new GeoJSON();
 
@@ -640,6 +641,7 @@ const Page: FC<{
               zoom: 16,
             }}
           >
+            <ControlOpenInOSM deviation={deviation} />
             <ROSM />
             {osmGeom ? (
               <RLayerVector zIndex={10}>

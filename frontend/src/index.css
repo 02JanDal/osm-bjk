@@ -1,0 +1,7 @@
+.open-in-osm {
+  top: 0.5rem;
+  right: 0.5rem;
+}
+.open-in-osm > * {
+  cursor: pointer;
+}

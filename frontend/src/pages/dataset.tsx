@@ -14,6 +14,7 @@ import { Point } from "ol/geom";
 import { TILESERVER } from "../config.ts";
 
 import arrow from "../assets/arrow-33-xxl.png";
+import { ControlOpenInOSM } from "../components/ControlOpenInOSM.tsx";
 
 const geojson = new GeoJSON();
 
@@ -157,6 +158,7 @@ const Page: FC<{ params: { id: string } }> = ({ params }) => {
               zoom: 5,
             }}
           >
+            <ControlOpenInOSM />
             <ROSM />
             {extent ? (
               <RLayerVector zIndex={10}>

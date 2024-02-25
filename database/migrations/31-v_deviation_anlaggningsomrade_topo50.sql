@@ -196,11 +196,11 @@ CREATE OR REPLACE VIEW upstream.v_match_anlaggningsomrade_topo50 AS
 -- 	UNION ALL
 	SELECT * FROM (
 		SELECT DISTINCT ON (item.id)
-			ARRAY[item.id] AS upstream_item_ids, jsonb_build_array(jsonb_build_object('landuse', 'commercial')) AS upstream_tags, item.geometry AS upstream_geom,
+			ARRAY[item.id] AS upstream_item_ids, jsonb_build_array(jsonb_build_object('landuse', 'commercial'), jsonb_build_object('landuse', 'institutional'), jsonb_build_object('man_made', 'water_works'), jsonb_build_object('man_made', 'wasterwater_plant')) AS upstream_tags, item.geometry AS upstream_geom,
 			element.id AS osm_element_id, element.type AS osm_element_type, element.tags AS osm_tags,
-			'Kan även vara `landuse=commercial`, kontrollera mot flygbild eller annan källa' AS note, item.original_attributes->>'objekttyp' AS andamal
+			'Kan även vara `landuse=commercial`, `landuse=institutional`, m.fl., kontrollera mot flygbild eller annan källa' AS note, item.original_attributes->>'objekttyp' AS andamal
 		FROM upstream.item LEFT OUTER JOIN osm.element
-		ON ST_DWithin(item.geometry, element.geom, 500) AND element.tags->>'landuse' IN ('commercial', 'institutional')
+		ON ST_DWithin(item.geometry, element.geom, 500) AND (element.tags->>'landuse' IN ('commercial', 'institutional') OR element.tags->>'man_made' IN ('water_works', 'wasterwater_plant'))
 		WHERE item.dataset_id = 140 AND item.original_attributes->>'andamal' = 'Ospecificerad' AND item.original_attributes->>'objekttyp' = 'Samhällsfunktion'
 		ORDER BY item.id, ST_Distance(item.geometry, element.geom)
 	) AS q17

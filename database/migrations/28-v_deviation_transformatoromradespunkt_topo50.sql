@@ -10,8 +10,8 @@ DROP MATERIALIZED VIEW IF EXISTS upstream.mv_match_transformatoromradespunkt_top
 CREATE MATERIALIZED VIEW upstream.mv_match_transformatoromradespunkt_topo50 AS SELECT * FROM upstream.v_match_transformatoromradespunkt_topo50;
 ALTER TABLE upstream.mv_match_transformatoromradespunkt_topo50 OWNER TO app;
 
-DROP VIEW IF EXISTS upstream.v_deviation_transformatoromrade_topo50;
-CREATE OR REPLACE VIEW upstream.v_deviation_transformatoromrade_topo50 AS
+DROP VIEW IF EXISTS upstream.v_deviation_transformatoromradespunkt_topo50;
+CREATE OR REPLACE VIEW upstream.v_deviation_transformatoromradespunkt_topo50 AS
 	SELECT
 		149::bigint AS dataset_id,
 		20::bigint AS layer_id,

@@ -14,7 +14,7 @@ CREATE OR REPLACE VIEW upstream.v_match_vindbrukskollen_turbines AS
 				'generator:type', 'horizontal_axis',
 				'manufacturer', TRIM(item.original_attributes->>'FABRIKAT'),
 				'generator:output:electricity', REPLACE(item.original_attributes->>'MAXEFFEKT', ',', '.') || ' MW',
-				'model', CASE WHEN TRIM(item.original_attributes->>'MODELL') = '' THEN NULL ELSE REPLACE(TRIM(item.original_attributes->>'MODELL'), ',', '.') END,
+				'model', CASE WHEN TRIM(item.original_attributes->>'MODELL') IN ('', '-') THEN NULL ELSE REPLACE(TRIM(item.original_attributes->>'MODELL'), ',', '.') END,
 				'height:hub', item.original_attributes->>'NAVHOJD',
 				'operator', CASE WHEN TRIM(item.original_attributes->>'ORGNAMN') ILIKE 'Projektör ej registrerad%' THEN NULL ELSE TRIM(item.original_attributes->>'ORGNAMN') END,
 				'rotor:diameter', item.original_attributes->>'ROTDIAMETE',
